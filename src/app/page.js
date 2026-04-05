@@ -1,24 +1,9 @@
 "use client";
-import Hero from "../components/Hero";
-import Projects from "@/components/Projects";
-import HireCTA from "@/components/HireCTA";
-import Skills from "../components/Skills";
-import Experience from "../components/Experience";
-import Contact from "../components/Contact";
-import Footer from "../components/Footer";
 
 export default function Page() {
   return (
-    <>
-      <main className="page-wrapper">
-        <Hero />
-        <Skills />
-        <HireCTA label="Like what you see? Let's build something together." />
-        <Projects />
-        <Experience />
-        <Contact />
-        <Footer />
-      </main>
+    <div>
+      <main className="page-wrapper"> This is my portfolio page.</main>
       <style jsx>{`
         .page-wrapper {
           display: flex;
@@ -43,6 +28,6 @@ export default function Page() {
           }
         }
       `}</style>
-    </>
+    </div>
   );
 }
