@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Primary:    --accent       #e8621a  warm amber-orange  (CTAs only)
+   Secondary:  --teal         #2dd4bf  cool teal          (tags, links, secondary)
+   Surface:    --glass-*      unified glass system
+   Background: deep cool-dark, not warm brown
+═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Background ── */
+  --bg-base: #080c12; /* deep navy-black, not warm brown   */
+  --bg-mid: #0e1520; /* slightly lighter layer            */
+  --bg-surface: #131d2e; /* card base                         */
+
+  /* ── Primary accent — orange. Used ONLY for primary CTAs ── */
+  --accent: #e8621a;
+  --accent-2: #f5842e; /* hover / lighter variant           */
+  --accent-dim: rgba(232, 98, 26, 0.12); /* tinted bg fills   */
+  --accent-border: rgba(232, 98, 26, 0.28);
+
+  /* ── Secondary accent — teal. Tags, links, secondary UI ── */
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45, 212, 191, 0.1);
+  --teal-border: rgba(45, 212, 191, 0.22);
+
+  /* ── Text ── */
+  --text: #f0ede8; /* warm white — easier on eyes vs pure white */
+  --muted: #8a8fa8; /* secondary text                            */
+  --faint: #4a506a; /* placeholder / disabled                    */
+
+  /* ── Unified glass system — ONE set of values, use nowhere else ── */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-mid: rgba(255, 255, 255, 0.07); /* hover state      */
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.14);
+  --glass-blur: 16px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 40px rgba(232, 98, 26, 0.12);
+}
+
+/* ── Tailwind helpers — map to tokens ── */
+.text-accent {
+  color: var(--accent);
+}
+.text-teal {
+  color: var(--teal);
+}
+.text-muted {
+  color: var(--muted);
+}
+.bg-accent {
+  background: var(--accent);
+}
+.bg-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+}
+.border-glass {
+  border: 1px solid var(--glass-border);
+}
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+.transition-base {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Font helper ── */
+.font-poppins {
+  font-family: var(--font-poppins), system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+}
+
+/* ── Hero text contrast ── */
+.hero-contrast {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Container ── */
+.app-frame {
+  max-width: 1320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BODY & BACKGROUND
+   Cool deep navy with a single off-center warm bloom — not a warm soup
+═══════════════════════════════════════════════════════════════════════ */
+body {
+  background-color: var(--bg-base);
+  color: var(--text);
+  font-family: "Poppins", Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Global background layers ── */
+.global-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Base: deep cool-dark gradient — gives depth without murkiness */
+.global-bg .bg-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    #080c12 0%,
+    #0a1020 40%,
+    #0d1428 70%,
+    #080c12 100%
+  );
+}
+
+/* A single warm bloom — off-center, dim, intentional */
+.global-bg .bg-bloom {
+  position: absolute;
+  width: 680px;
+  height: 680px;
+  border-radius: 50%;
+  /* Positioned upper-right — asymmetric, not centered */
+  top: -120px;
+  right: -80px;
+  background: radial-gradient(
+    circle,
+    rgba(232, 98, 26, 0.1) 0%,
+    rgba(232, 98, 26, 0.04) 50%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  animation: bloom-drift 12s ease-in-out infinite alternate;
+}
+
+/* A cool counter-bloom lower-left */
+.global-bg .bg-bloom-cool {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  bottom: -60px;
+  left: -60px;
+  background: radial-gradient(
+    circle,
+    rgba(45, 212, 191, 0.06) 0%,
+    transparent 65%
+  );
+  filter: blur(48px);
+  animation: bloom-drift 16s ease-in-out infinite alternate-reverse;
+}
+
+/* Subtle grain texture */
+.global-bg .bg-noise {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.4;
+}
+
+@keyframes bloom-drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(30px, 20px) scale(1.08);
+  }
+}
+
+/* ── Site content sits above bg ── */
+.site-content {
+  position: relative;
+  z-index: 50;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   JELLYFISH / AXOLOTL OVERLAY
+═══════════════════════════════════════════════════════════════════════ */
+.jellyfish-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
