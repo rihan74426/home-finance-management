@@ -1,38 +1,37 @@
 @import "tailwindcss";
-
 /* ═══════════════════════════════════════════════════════════════════════
    DESIGN TOKENS
    Primary:    --accent       #e8621a  warm amber-orange  (CTAs only)
    Secondary:  --teal         #2dd4bf  cool teal          (tags, links, secondary)
    Surface:    --glass-*      unified glass system
-   Background: deep cool-dark, not warm brown
+   Background: deep cool-dark
 ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Background ── */
-  --bg-base: #080c12; /* deep navy-black, not warm brown   */
-  --bg-mid: #0e1520; /* slightly lighter layer            */
-  --bg-surface: #131d2e; /* card base                         */
+  --bg-base: #080c12;
+  --bg-mid: #0e1520;
+  --bg-surface: #131d2e;
 
   /* ── Primary accent — orange. Used ONLY for primary CTAs ── */
   --accent: #e8621a;
-  --accent-2: #f5842e; /* hover / lighter variant           */
-  --accent-dim: rgba(232, 98, 26, 0.12); /* tinted bg fills   */
+  --accent-2: #f5842e;
+  --accent-dim: rgba(232, 98, 26, 0.12);
   --accent-border: rgba(232, 98, 26, 0.28);
 
-  /* ── Secondary accent — teal. Tags, links, secondary UI ── */
+  /* ── Secondary accent — teal ── */
   --teal: #2dd4bf;
   --teal-dim: rgba(45, 212, 191, 0.1);
   --teal-border: rgba(45, 212, 191, 0.22);
 
   /* ── Text ── */
-  --text: #f0ede8; /* warm white — easier on eyes vs pure white */
-  --muted: #8a8fa8; /* secondary text                            */
-  --faint: #4a506a; /* placeholder / disabled                    */
+  --text: #f0ede8;
+  --muted: #8a8fa8;
+  --faint: #4a506a;
 
-  /* ── Unified glass system — ONE set of values, use nowhere else ── */
+  /* ── Unified glass system ── */
   --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-mid: rgba(255, 255, 255, 0.07); /* hover state      */
+  --glass-bg-mid: rgba(255, 255, 255, 0.07);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-hover: rgba(255, 255, 255, 0.14);
   --glass-blur: 16px;
@@ -40,9 +39,31 @@
   /* ── Shadows ── */
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 40px rgba(232, 98, 26, 0.12);
+
+  /* shadcn/ui compatibility */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted-bg: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent-ui: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
 }
 
-/* ── Tailwind helpers — map to tokens ── */
+/* ── Tailwind helpers ── */
 .text-accent {
   color: var(--accent);
 }
@@ -71,8 +92,14 @@
 
 /* ── Font helper ── */
 .font-poppins {
-  font-family: var(--font-poppins), system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial;
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
 }
 
 /* ── Hero text contrast ── */
@@ -89,12 +116,18 @@
 
 /* ═══════════════════════════════════════════════════════════════════════
    BODY & BACKGROUND
-   Cool deep navy with a single off-center warm bloom — not a warm soup
 ═══════════════════════════════════════════════════════════════════════ */
 body {
   background-color: var(--bg-base);
   color: var(--text);
-  font-family: "Poppins", Arial, Helvetica, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   min-height: 100vh;
 }
 
@@ -107,7 +140,6 @@ body {
   overflow: hidden;
 }
 
-/* Base: deep cool-dark gradient — gives depth without murkiness */
 .global-bg .bg-base {
   position: absolute;
   inset: 0;
@@ -120,13 +152,11 @@ body {
   );
 }
 
-/* A single warm bloom — off-center, dim, intentional */
 .global-bg .bg-bloom {
   position: absolute;
   width: 680px;
   height: 680px;
   border-radius: 50%;
-  /* Positioned upper-right — asymmetric, not centered */
   top: -120px;
   right: -80px;
   background: radial-gradient(
@@ -139,7 +169,6 @@ body {
   animation: bloom-drift 12s ease-in-out infinite alternate;
 }
 
-/* A cool counter-bloom lower-left */
 .global-bg .bg-bloom-cool {
   position: absolute;
   width: 500px;
@@ -156,7 +185,6 @@ body {
   animation: bloom-drift 16s ease-in-out infinite alternate-reverse;
 }
 
-/* Subtle grain texture */
 .global-bg .bg-noise {
   position: absolute;
   inset: 0;
@@ -181,14 +209,4 @@ body {
 
 html {
   scroll-behavior: smooth;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   JELLYFISH / AXOLOTL OVERLAY
-═══════════════════════════════════════════════════════════════════════ */
-.jellyfish-root {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 40;
 }
