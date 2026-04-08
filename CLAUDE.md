@@ -1,3 +1,13 @@
+# next-steps
+
+1. Clerk Webhook → User sync — The User model exists but nothing creates users in MongoDB yet. Without this, every feature breaks. Set up /api/webhooks/clerk to sync user.created, user.updated, user.deleted events.
+2. House creation flow — The core of everything. API route POST /api/houses + the creation UI. This also creates the first Membership record (creator as manager) and the default "General" thread.
+3. Dashboard layout + shell — /dashboard route with sidebar nav (Ledger, Vault, Tasks, Grocery, Chat, Members, Settings). Placeholder pages are fine — just the authenticated shell.
+4. Member invite system — POST /api/houses/:id/invites + the /invite/[token] acceptance page. Without this, a house has one person forever.
+5. Rent Ledger — The highest-value feature for your target market. Manager logs payments, member sees their history, PDF export. This is the reason people in BD/PK will actually adopt Homy.
+6. Vault — Second highest stickiness feature. WiFi password saved once = user never leaves.
+7. Task board — Third pillar of daily utility.
+
 # CLAUDE.md — Homy Project Intelligence
 
 > This file is the living memory of the Homy project. It tracks decisions, progress, current state, and what comes next. Update this file at every session. Claude reads this file first on every new conversation.
@@ -28,7 +38,7 @@ The pivot decision: broaden from "finance only" to a full **household operating 
 | Layer              | Choice                       | Reason                                    |
 | ------------------ | ---------------------------- | ----------------------------------------- |
 | Web framework      | Next.js 14 (App Router)      | SSR, SEO, API routes, Vercel deployment   |
-| Language           | TypeScript                   | Type safety across monorepo               |
+| Language           | JavaScript                   | Type safety across monorepo               |
 | Auth               | Clerk                        | Phone + email, webhooks, fast setup       |
 | Styling            | Tailwind CSS + shadcn/ui     | Speed, consistency                        |
 | State              | Zustand + TanStack Query     | Simple global state + data fetching       |
@@ -346,7 +356,7 @@ The goal is genuine utility habit, not addiction. Users stay because Homy actual
 **Next session should start with:**
 
 1. Initialize the Turborepo monorepo
-2. Set up Next.js 14 with TypeScript + Tailwind + shadcn/ui
+2. Set up Next.js 14 with JavaScript + Tailwind + shadcn/ui
 3. Configure Clerk authentication
 4. Set up MongoDB Atlas connection + base Mongoose models
 5. Build the House creation flow
@@ -366,7 +376,7 @@ The goal is genuine utility habit, not addiction. Users stay because Homy actual
 
 ## Notes for Claude
 
-- When writing code, always use TypeScript
+- When writing code, always use JavaScript
 - API responses should follow: `{ success: boolean, data?: any, error?: string }`
 - All monetary amounts stored in smallest currency unit (paisa/paise/pence) as integers
 - Dates stored as UTC, displayed in user's local timezone
