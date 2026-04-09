@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import connectDB from "@/lib/db/mongoose";
 import House from "@/models/House";
 import User from "@/models/User";
@@ -19,14 +19,25 @@ export async function GET() {
 
   await connectDB();
 
-  const user = await User.findOne({ clerkId, deletedAt: null });
+  // In GET /api/houses, replace the 404 block with:
+  let user = await User.findOne({ clerkId, deletedAt: null });
   if (!user) {
-    return Response.json(
-      { success: false, error: "User not found" },
-      { status: 404 }
-    );
+    // Auto-create from Clerk session as fallback
+    const clerkUser = await (await clerkClient()).users.getUser(clerkId);
+    const email =
+      clerkUser.emailAddresses.find(
+        (e) => e.id === clerkUser.primaryEmailAddressId
+      )?.emailAddress ?? `${clerkId}@placeholder.homy`;
+    user = await User.create({
+      clerkId,
+      email,
+      name:
+        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
+        clerkUser.username ||
+        "User",
+      avatarUrl: clerkUser.imageUrl ?? null,
+    });
   }
-
   // Find all active memberships for this user, populate house data
   const memberships = await Membership.find({
     userId: user._id,
