@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useParams } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
@@ -14,29 +14,33 @@ import {
   MessageSquare,
   Users,
   Settings,
-  Zap,
+  ChevronLeft,
 } from "lucide-react";
 
-const NAV = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
-  { href: "/dashboard/ledger", icon: BookOpen, label: "Ledger" },
-  { href: "/dashboard/vault", icon: ShieldCheck, label: "Vault" },
-  { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
-  { href: "/dashboard/grocery", icon: ShoppingCart, label: "Grocery" },
-  { href: "/dashboard/chat", icon: MessageSquare, label: "Chat" },
-  { href: "/dashboard/members", icon: Users, label: "Members" },
-  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+const TOP_NAV = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "My Houses" },
+];
+
+const HOUSE_NAV = [
+  { href: "", icon: LayoutDashboard, label: "Overview" },
+  { href: "/ledger", icon: BookOpen, label: "Ledger" },
+  { href: "/vault", icon: ShieldCheck, label: "Vault" },
+  { href: "/tasks", icon: CheckSquare, label: "Tasks" },
+  { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
+  { href: "/chat", icon: MessageSquare, label: "Chat" },
+  { href: "/members", icon: Users, label: "Members" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function DashboardLayout({ children }) {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const params = useParams();
+  const houseId = params?.houseId;
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.replace("/");
-    }
+    if (isLoaded && !isSignedIn) router.replace("/");
   }, [isLoaded, isSignedIn, router]);
 
   if (!isLoaded) {
@@ -67,7 +71,7 @@ export default function DashboardLayout({ children }) {
         display: "flex",
       }}
     >
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside
         style={{
           width: 220,
@@ -75,7 +79,6 @@ export default function DashboardLayout({ children }) {
           borderRight: "1px solid var(--glass-border)",
           display: "flex",
           flexDirection: "column",
-          padding: "0",
           position: "sticky",
           top: 0,
           height: "100vh",
@@ -106,40 +109,92 @@ export default function DashboardLayout({ children }) {
           </Link>
         </div>
 
-        {/* Nav links */}
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
-          {NAV.map(({ href, icon: Icon, label }) => {
-            const active = pathname === href;
-            return (
+          {/* If inside a house, show house nav */}
+          {houseId ? (
+            <>
               <Link
-                key={href}
-                href={href}
+                href="/dashboard"
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  borderRadius: 10,
-                  marginBottom: 2,
-                  fontSize: "0.875rem",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--text)" : "var(--muted)",
-                  background: active ? "var(--glass-bg-mid)" : "transparent",
+                  gap: 8,
+                  padding: "7px 12px",
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  fontSize: "0.78rem",
+                  color: "var(--muted)",
                   textDecoration: "none",
-                  transition: "all 0.15s ease",
                 }}
               >
-                <Icon
-                  size={16}
-                  color={active ? "var(--accent)" : "var(--muted)"}
-                />
-                {label}
+                <ChevronLeft size={13} /> All Houses
               </Link>
-            );
-          })}
+              {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
+                const fullHref = `/dashboard/${houseId}${href}`;
+                const active = pathname === fullHref;
+                return (
+                  <Link
+                    key={href}
+                    href={fullHref}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 12px",
+                      borderRadius: 10,
+                      marginBottom: 2,
+                      fontSize: "0.875rem",
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "var(--text)" : "var(--muted)",
+                      background: active
+                        ? "var(--glass-bg-mid)"
+                        : "transparent",
+                      textDecoration: "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <Icon
+                      size={16}
+                      color={active ? "var(--accent)" : "var(--muted)"}
+                    />
+                    {label}
+                  </Link>
+                );
+              })}
+            </>
+          ) : (
+            TOP_NAV.map(({ href, icon: Icon, label }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    borderRadius: 10,
+                    marginBottom: 2,
+                    fontSize: "0.875rem",
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "var(--text)" : "var(--muted)",
+                    background: active ? "var(--glass-bg-mid)" : "transparent",
+                    textDecoration: "none",
+                  }}
+                >
+                  <Icon
+                    size={16}
+                    color={active ? "var(--accent)" : "var(--muted)"}
+                  />
+                  {label}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
-        {/* Bottom: user */}
+        {/* User */}
         <div
           style={{
             padding: "16px 20px",
@@ -170,31 +225,8 @@ export default function DashboardLayout({ children }) {
         </div>
       </aside>
 
-      {/* ── Main content ── */}
+      {/* Main */}
       <main style={{ flex: 1, overflow: "auto" }}>
-        {/* Top bar */}
-        <div
-          style={{
-            padding: "16px 28px",
-            borderBottom: "1px solid var(--glass-border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "var(--bg-mid)",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Zap size={14} color="var(--accent)" />
-            <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-              Beta
-            </span>
-          </div>
-        </div>
-
-        {/* Page content */}
         <div style={{ padding: "28px" }}>{children}</div>
       </main>
     </div>
