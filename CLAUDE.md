@@ -14,9 +14,12 @@ to-dos: 10/4/26
 
 - the role based boundaries and limitations and access must be set and work out.
 
-Bill splitting — POST /api/houses/[id]/bills + split logic + ledger entries
-PDF export — Ledger export per member using @react-pdf/renderer
-SMS reminders — Twilio integration for rent due notifications via Bull queue
+- Bill splitting — POST /api/houses/[id]/bills + split logic + ledger entries
+- PDF export — Ledger export per member using @react-pdf/renderer
+- SMS reminders — Twilio integration for rent due notifications via Bull queue
+- we'll need a push notification of chats
+- the event system
+- the meeting
 
 # CLAUDE.md — Homy Project Intelligence
 
