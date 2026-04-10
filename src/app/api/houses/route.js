@@ -7,22 +7,19 @@ import { Thread } from "@/models/Thread";
 import { ROLES, HOUSE_TYPE, PLAN } from "@/lib/constants";
 
 // ── GET /api/houses ───────────────────────────────────────────────────────────
-// Returns all active houses the current user belongs to.
 export async function GET() {
   const { userId: clerkId } = await auth();
-  if (!clerkId) {
+  if (!clerkId)
     return Response.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
-  }
 
   await connectDB();
 
-  // In GET /api/houses, replace the 404 block with:
+  // Auto-create user from Clerk if webhook hasn't fired yet
   let user = await User.findOne({ clerkId, deletedAt: null });
   if (!user) {
-    // Auto-create from Clerk session as fallback
     const clerkUser = await (await clerkClient()).users.getUser(clerkId);
     const email =
       clerkUser.emailAddresses.find(
@@ -38,7 +35,7 @@ export async function GET() {
       avatarUrl: clerkUser.imageUrl ?? null,
     });
   }
-  // Find all active memberships for this user, populate house data
+
   const memberships = await Membership.find({
     userId: user._id,
     isActive: true,
@@ -49,7 +46,6 @@ export async function GET() {
       "name address type avatarUrl plan currency rentDueDay managerId createdAt",
   });
 
-  // Filter out any where houseId didn't match (deleted houses)
   const houses = memberships
     .filter((m) => m.houseId)
     .map((m) => ({
@@ -64,26 +60,22 @@ export async function GET() {
 }
 
 // ── POST /api/houses ──────────────────────────────────────────────────────────
-// Creates a new house. Creator becomes the manager.
-// Also creates: Membership (manager role) + default General thread.
 export async function POST(req) {
   const { userId: clerkId } = await auth();
-  if (!clerkId) {
+  if (!clerkId)
     return Response.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
-  }
 
   await connectDB();
 
   const user = await User.findOne({ clerkId, deletedAt: null });
-  if (!user) {
+  if (!user)
     return Response.json(
-      { success: false, error: "User not found" },
+      { success: false, error: "User not found. Try refreshing." },
       { status: 404 }
     );
-  }
 
   let body;
   try {
@@ -97,45 +89,39 @@ export async function POST(req) {
 
   const { name, type, address, currency, rentDueDay, rules } = body;
 
-  // ── Validation ─────────────────────────────────────────────────────────────
-  if (!name || typeof name !== "string" || !name.trim()) {
+  if (!name || typeof name !== "string" || !name.trim())
     return Response.json(
       { success: false, error: "House name is required" },
       { status: 400 }
     );
-  }
-  if (name.trim().length > 100) {
+  if (name.trim().length > 100)
     return Response.json(
       { success: false, error: "House name too long (max 100 chars)" },
       { status: 400 }
     );
-  }
-  if (type && !Object.values(HOUSE_TYPE).includes(type)) {
+  if (type && !Object.values(HOUSE_TYPE).includes(type))
     return Response.json(
       { success: false, error: "Invalid house type" },
       { status: 400 }
     );
-  }
   if (rentDueDay !== undefined) {
     const day = Number(rentDueDay);
-    if (!Number.isInteger(day) || day < 1 || day > 28) {
+    if (!Number.isInteger(day) || day < 1 || day > 28)
       return Response.json(
         { success: false, error: "rentDueDay must be 1–28" },
         { status: 400 }
       );
-    }
   }
 
-  // ── Free plan: max 1 house as manager ─────────────────────────────────────
-  // (Pro plan check can be added later when Stripe is wired up)
+  // Free plan: max 1 house as manager
   if (user.plan === PLAN.FREE) {
-    const existingManagerMembership = await Membership.findOne({
+    const existing = await Membership.findOne({
       userId: user._id,
       role: ROLES.MANAGER,
       isActive: true,
     }).populate({ path: "houseId", match: { deletedAt: null } });
 
-    if (existingManagerMembership?.houseId) {
+    if (existing?.houseId)
       return Response.json(
         {
           success: false,
@@ -144,10 +130,8 @@ export async function POST(req) {
         },
         { status: 403 }
       );
-    }
   }
 
-  // ── Create house ───────────────────────────────────────────────────────────
   const house = await House.create({
     name: name.trim(),
     type: type ?? HOUSE_TYPE.FLAT,
@@ -165,7 +149,6 @@ export async function POST(req) {
     rules: rules?.trim() ?? "",
   });
 
-  // ── Create manager membership ──────────────────────────────────────────────
   const membership = await Membership.create({
     userId: user._id,
     houseId: house._id,
@@ -174,7 +157,6 @@ export async function POST(req) {
     isActive: true,
   });
 
-  // ── Create default General thread ─────────────────────────────────────────
   await Thread.create({
     houseId: house._id,
     createdBy: user._id,
@@ -186,11 +168,7 @@ export async function POST(req) {
   return Response.json(
     {
       success: true,
-      data: {
-        house,
-        membershipId: membership._id,
-        role: ROLES.MANAGER,
-      },
+      data: { house, membershipId: membership._id, role: ROLES.MANAGER },
     },
     { status: 201 }
   );

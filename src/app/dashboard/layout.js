@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
 import {
   LayoutDashboard,
@@ -15,11 +16,10 @@ import {
   Users,
   Settings,
   ChevronLeft,
+  Home,
 } from "lucide-react";
 
-const TOP_NAV = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "My Houses" },
-];
+const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
 
 const HOUSE_NAV = [
   { href: "", icon: LayoutDashboard, label: "Overview" },
@@ -96,7 +96,7 @@ export default function DashboardLayout({ children }) {
             href="/dashboard"
             style={{
               fontWeight: 800,
-              fontSize: "1.2rem",
+              fontSize: "1.1rem",
               letterSpacing: "-0.02em",
               color: "var(--text)",
               textDecoration: "none",
@@ -105,12 +105,18 @@ export default function DashboardLayout({ children }) {
               gap: 8,
             }}
           >
-            🏠 Homy
+            <Image
+              src="/favicon.png"
+              alt="Homy"
+              width={20}
+              height={20}
+              style={{ borderRadius: 6, objectFit: "cover" }}
+            />
+            <span style={{ display: "inline-block", marginLeft: 6 }}>Homy</span>
           </Link>
         </div>
 
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
-          {/* If inside a house, show house nav */}
           {houseId ? (
             <>
               <Link
@@ -129,6 +135,7 @@ export default function DashboardLayout({ children }) {
               >
                 <ChevronLeft size={13} /> All Houses
               </Link>
+
               {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
                 const fullHref = `/dashboard/${houseId}${href}`;
                 const active = pathname === fullHref;

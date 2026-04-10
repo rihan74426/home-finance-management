@@ -1,6 +1,25 @@
 "use client";
 
-import { Construction } from "lucide-react";
+import {
+  Construction,
+  MessageSquare,
+  ShoppingCart,
+  BookOpen,
+  ShieldCheck,
+  CheckSquare,
+  Users,
+  Settings,
+} from "lucide-react";
+
+const ICON_MAP = {
+  chat: MessageSquare,
+  grocery: ShoppingCart,
+  ledger: BookOpen,
+  vault: ShieldCheck,
+  tasks: CheckSquare,
+  members: Users,
+  settings: Settings,
+};
 
 export default function PlaceholderPage({
   icon,
@@ -8,6 +27,8 @@ export default function PlaceholderPage({
   description,
   comingSoon = true,
 }) {
+  const Icon = ICON_MAP[icon] ?? Construction;
+
   return (
     <div
       style={{
@@ -20,7 +41,21 @@ export default function PlaceholderPage({
         gap: 16,
       }}
     >
-      <div style={{ fontSize: "3rem" }}>{icon}</div>
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          background: "var(--glass-bg-mid)",
+          border: "1px solid var(--glass-border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon size={24} color="var(--muted)" />
+      </div>
+
       <div>
         <h1
           style={{
@@ -38,6 +73,7 @@ export default function PlaceholderPage({
           {description}
         </p>
       </div>
+
       {comingSoon && (
         <div
           style={{
@@ -53,7 +89,8 @@ export default function PlaceholderPage({
             fontWeight: 600,
           }}
         >
-          <Construction size={16} /> Coming soon
+          <Construction size={13} />
+          Coming soon
         </div>
       )}
     </div>

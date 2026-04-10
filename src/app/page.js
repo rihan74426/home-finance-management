@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function HomePage() {
@@ -26,14 +27,24 @@ export default function HomePage() {
           borderBottom: "1px solid var(--glass-border)",
         }}
       >
-        <div
-          style={{
-            fontWeight: 800,
-            fontSize: "1.4rem",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          🏠 Homy
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Image
+            src="/favicon.png"
+            alt="Homy"
+            width={28}
+            height={28}
+            style={{ borderRadius: 6, objectFit: "cover" }}
+          />
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: "1.1rem",
+              letterSpacing: "-0.02em",
+              color: "var(--text)",
+            }}
+          >
+            Homy
+          </div>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           {isLoaded && (

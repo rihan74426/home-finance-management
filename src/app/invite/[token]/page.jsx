@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import Image from "next/image";
 import { Home, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 const HOUSE_TYPE_EMOJI = {
@@ -78,14 +79,19 @@ export default function InvitePage() {
     >
       {/* Logo */}
       <div
-        style={{
-          marginBottom: 40,
-          fontWeight: 800,
-          fontSize: "1.3rem",
-          letterSpacing: "-0.02em",
-        }}
+        style={{ marginBottom: 28, display: "flex", justifyContent: "center" }}
       >
-        🏠 Homy
+        <Image
+          src="/pageIcon.png"
+          alt="Homy"
+          width={72}
+          height={72}
+          style={{
+            objectFit: "contain",
+            borderRadius: 8,
+            boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+          }}
+        />
       </div>
 
       <div

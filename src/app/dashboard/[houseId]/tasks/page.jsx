@@ -15,17 +15,18 @@ import {
 import { TASK_PRIORITY, TASK_CATEGORY, TASK_STATUS } from "@/lib/constants";
 
 const PRIORITY_CONFIG = {
-  low: { label: "Low", color: "var(--muted)", dot: "#6b7280" },
-  normal: { label: "Normal", color: "var(--teal)", dot: "#2dd4bf" },
-  urgent: { label: "Urgent", color: "#f87171", dot: "#f87171" },
+  low: { label: "Low", color: "var(--muted)" },
+  normal: { label: "Normal", color: "var(--teal)" },
+  urgent: { label: "Urgent", color: "#f87171" },
 };
-const CATEGORY_EMOJI = {
-  cleaning: "🧹",
-  grocery: "🛒",
-  maintenance: "🔧",
-  payment: "💰",
-  admin: "📋",
-  other: "📌",
+
+const CATEGORY_LABELS = {
+  cleaning: "Cleaning",
+  grocery: "Grocery",
+  maintenance: "Maintenance",
+  payment: "Payment",
+  admin: "Admin",
+  other: "Other",
 };
 
 function fmtDate(d) {
@@ -68,12 +69,11 @@ export default function TasksPage() {
   const { houseId } = useParams();
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
-  const [myMembershipId, setMyMembershipId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("active"); // active | done | all
+  const [filter, setFilter] = useState("active");
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -91,10 +91,7 @@ export default function TasksPage() {
         fetch(`/api/houses/${houseId}/members`),
       ]);
       const [tJson, mJson] = await Promise.all([tRes.json(), mRes.json()]);
-      if (tJson.success) {
-        setTasks(tJson.data);
-        setMyMembershipId(String(tJson.myMembershipId));
-      }
+      if (tJson.success) setTasks(tJson.data);
       if (mJson.success) setMembers(mJson.data);
       setLoading(false);
     }
@@ -140,7 +137,6 @@ export default function TasksPage() {
   async function toggleDone(task) {
     const newStatus =
       task.status === TASK_STATUS.DONE ? TASK_STATUS.TODO : TASK_STATUS.DONE;
-    // Optimistic update
     setTasks((p) =>
       p.map((t) => (t._id === task._id ? { ...t, status: newStatus } : t))
     );
@@ -151,7 +147,7 @@ export default function TasksPage() {
     });
     const json = await res.json();
     if (!json.success)
-      setTasks((p) => p.map((t) => (t._id === task._id ? task : t))); // revert
+      setTasks((p) => p.map((t) => (t._id === task._id ? task : t)));
   }
 
   async function handleDelete(id) {
@@ -186,16 +182,25 @@ export default function TasksPage() {
         }}
       >
         <div>
-          <h1
+          <div
             style={{
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
               marginBottom: 4,
             }}
           >
-            Task Board ✅
-          </h1>
+            <CheckSquare size={20} color="var(--accent)" />
+            <h1
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Task Board
+            </h1>
+          </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             {activeCount} active task{activeCount !== 1 ? "s" : ""}
           </p>
@@ -249,7 +254,7 @@ export default function TasksPage() {
         ))}
       </div>
 
-      {/* Create task modal */}
+      {/* Create modal */}
       {showForm && (
         <div
           style={{
@@ -349,10 +354,9 @@ export default function TasksPage() {
                     value={form.category}
                     onChange={(e) => setF("category", e.target.value)}
                   >
-                    {Object.keys(CATEGORY_EMOJI).map((c) => (
-                      <option key={c} value={c}>
-                        {CATEGORY_EMOJI[c]}{" "}
-                        {c.charAt(0).toUpperCase() + c.slice(1)}
+                    {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
                       </option>
                     ))}
                   </select>
@@ -471,7 +475,6 @@ export default function TasksPage() {
                   alignItems: "flex-start",
                   gap: 12,
                   opacity: isDone ? 0.6 : 1,
-                  transition: "opacity 0.2s",
                 }}
               >
                 <button
@@ -513,16 +516,13 @@ export default function TasksPage() {
                         fontSize: "0.68rem",
                         color: pc.color,
                         fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
                       }}
                     >
-                      <Flag
-                        size={10}
-                        style={{ display: "inline", marginRight: 2 }}
-                      />
+                      <Flag size={10} />
                       {pc.label}
-                    </span>
-                    <span style={{ fontSize: "0.72rem" }}>
-                      {CATEGORY_EMOJI[task.category]}
                     </span>
                   </div>
                   {task.description && (
@@ -541,7 +541,7 @@ export default function TasksPage() {
                       <span
                         style={{ fontSize: "0.75rem", color: "var(--teal)" }}
                       >
-                        → {assignee.name}
+                        {assignee.name}
                       </span>
                     )}
                     {due && (

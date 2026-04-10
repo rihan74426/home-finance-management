@@ -41,7 +41,7 @@ export async function GET(req, { params }) {
     );
 
   const { searchParams } = new URL(req.url);
-  const statusFilter = searchParams.get("status"); // optional filter
+  const statusFilter = searchParams.get("status");
 
   const query = { houseId: id, deletedAt: null };
   if (statusFilter) query.status = statusFilter;
@@ -101,13 +101,13 @@ export async function POST(req, { params }) {
     dueDate,
     recurrence,
   } = await req.json();
+
   if (!title?.trim())
     return Response.json(
       { success: false, error: "Title required" },
       { status: 400 }
     );
 
-  // Validate assignedTo belongs to this house
   if (assignedTo) {
     const assignedMembership = await Membership.findOne({
       _id: assignedTo,

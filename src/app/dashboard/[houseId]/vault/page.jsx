@@ -11,23 +11,31 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Lock,
+  ShieldCheck,
+  Wifi,
+  DoorOpen,
+  Key,
+  FileText,
+  Phone,
+  Folder,
+  Wrench,
+  MoreHorizontal,
 } from "lucide-react";
 
 const TYPE_CONFIG = {
-  wifi: { label: "WiFi", emoji: "📶", f1: "Network name", f2: "Password" },
-  door_code: { label: "Door Code", emoji: "🚪", f1: "Code", f2: "" },
-  gate_code: { label: "Gate Code", emoji: "🔑", f1: "Code", f2: "" },
-  lease: { label: "Lease", emoji: "📄", f1: "Details", f2: "" },
-  contact: { label: "Contact", emoji: "📞", f1: "Phone / Email", f2: "Notes" },
-  document: { label: "Document", emoji: "📁", f1: "Details", f2: "Notes" },
+  wifi: { label: "WiFi", icon: Wifi, f1: "Network name", f2: "Password" },
+  door_code: { label: "Door Code", icon: DoorOpen, f1: "Code", f2: "" },
+  gate_code: { label: "Gate Code", icon: Key, f1: "Code", f2: "" },
+  lease: { label: "Lease", icon: FileText, f1: "Details", f2: "" },
+  contact: { label: "Contact", icon: Phone, f1: "Phone / Email", f2: "Notes" },
+  document: { label: "Document", icon: Folder, f1: "Details", f2: "Notes" },
   appliance: {
     label: "Appliance",
-    emoji: "🔧",
+    icon: Wrench,
     f1: "Model / Serial",
     f2: "Notes",
   },
-  other: { label: "Other", emoji: "📌", f1: "Value", f2: "Notes" },
+  other: { label: "Other", icon: MoreHorizontal, f1: "Value", f2: "Notes" },
 };
 
 function CopyBtn({ value }) {
@@ -196,6 +204,7 @@ export default function VaultPage() {
     acc[g].push(item);
     return acc;
   }, {});
+
   const tc = TYPE_CONFIG[form.type] || TYPE_CONFIG.other;
 
   if (loading)
@@ -216,16 +225,25 @@ export default function VaultPage() {
         }}
       >
         <div>
-          <h1
+          <div
             style={{
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
               marginBottom: 4,
             }}
           >
-            The Vault 🔐
-          </h1>
+            <ShieldCheck size={20} color="var(--accent)" />
+            <h1
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              The Vault
+            </h1>
+          </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             Household info, encrypted and always accessible.
           </p>
@@ -326,7 +344,7 @@ export default function VaultPage() {
                 >
                   {Object.entries(TYPE_CONFIG).map(([v, c]) => (
                     <option key={v} value={v}>
-                      {c.emoji} {c.label}
+                      {c.label}
                     </option>
                   ))}
                 </select>
@@ -426,17 +444,21 @@ export default function VaultPage() {
             color: "var(--muted)",
           }}
         >
-          <Lock size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <ShieldCheck size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
           <p>Your vault is empty. Start with your WiFi password.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {Object.entries(grouped).map(([type, typeItems]) => {
             const tc2 = TYPE_CONFIG[type] || TYPE_CONFIG.other;
+            const TypeIcon = tc2.icon;
             return (
               <div key={type}>
                 <div
                   style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                     fontSize: "0.72rem",
                     fontWeight: 700,
                     color: "var(--muted)",
@@ -445,7 +467,8 @@ export default function VaultPage() {
                     marginBottom: 8,
                   }}
                 >
-                  {tc2.emoji} {tc2.label}
+                  <TypeIcon size={12} />
+                  {tc2.label}
                 </div>
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 7 }}

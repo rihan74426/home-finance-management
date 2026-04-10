@@ -132,7 +132,6 @@ export default function LedgerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // Form state
   const [form, setForm] = useState({
     membershipId: "",
     amountDue: "",
@@ -230,14 +229,12 @@ export default function LedgerPage() {
       </div>
     );
 
-  // Summary stats for manager
   const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
   const totalPaid = entries.reduce((s, e) => s + (e.amountPaid || 0), 0);
   const overdueCount = entries.filter((e) => e.status === "overdue").length;
 
   return (
     <div>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -247,16 +244,25 @@ export default function LedgerPage() {
         }}
       >
         <div>
-          <h1
+          <div
             style={{
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
               marginBottom: 4,
             }}
           >
-            Rent Ledger
-          </h1>
+            <BookOpen size={20} color="var(--accent)" />
+            <h1
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Rent Ledger
+            </h1>
+          </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             {house?.name} · {house?.currency}
           </p>
@@ -283,7 +289,6 @@ export default function LedgerPage() {
         )}
       </div>
 
-      {/* Stats (manager only) */}
       {isManager && (
         <div
           style={{
@@ -305,7 +310,7 @@ export default function LedgerPage() {
               color: "#4ade80",
             },
             {
-              label: "Overdue Entries",
+              label: "Overdue",
               value: overdueCount,
               color: overdueCount > 0 ? "#f87171" : "var(--muted)",
             },
@@ -340,7 +345,7 @@ export default function LedgerPage() {
         </div>
       )}
 
-      {/* Log Payment Modal */}
+      {/* Modal */}
       {showForm && (
         <div
           style={{
@@ -389,7 +394,6 @@ export default function LedgerPage() {
                 <X size={18} />
               </button>
             </div>
-
             {error && (
               <div
                 style={{
@@ -405,7 +409,6 @@ export default function LedgerPage() {
                 {error}
               </div>
             )}
-
             <form
               onSubmit={handleSubmit}
               style={{ display: "flex", flexDirection: "column", gap: 14 }}
@@ -425,7 +428,6 @@ export default function LedgerPage() {
                   ))}
                 </select>
               </div>
-
               <div
                 style={{
                   display: "grid",
@@ -460,7 +462,6 @@ export default function LedgerPage() {
                   />
                 </div>
               </div>
-
               <div
                 style={{
                   display: "grid",
@@ -487,7 +488,6 @@ export default function LedgerPage() {
                   />
                 </div>
               </div>
-
               <div
                 style={{
                   display: "grid",
@@ -519,7 +519,6 @@ export default function LedgerPage() {
                   </select>
                 </div>
               </div>
-
               <div>
                 <label style={labelStyle}>Label</label>
                 <input
@@ -530,7 +529,6 @@ export default function LedgerPage() {
                   onChange={(e) => setF("label", e.target.value)}
                 />
               </div>
-
               <div>
                 <label style={labelStyle}>Note for member</label>
                 <input
@@ -541,7 +539,6 @@ export default function LedgerPage() {
                   onChange={(e) => setF("memberNote", e.target.value)}
                 />
               </div>
-
               <div>
                 <label style={labelStyle}>Private note (manager only)</label>
                 <input
@@ -552,7 +549,6 @@ export default function LedgerPage() {
                   onChange={(e) => setF("managerNote", e.target.value)}
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={submitting}
@@ -587,7 +583,6 @@ export default function LedgerPage() {
         </div>
       )}
 
-      {/* Ledger entries */}
       {entries.length === 0 ? (
         <div
           style={{
@@ -686,7 +681,7 @@ export default function LedgerPage() {
                         marginTop: 3,
                       }}
                     >
-                      🔒 {e.managerNote}
+                      {e.managerNote}
                     </div>
                   )}
                 </div>
