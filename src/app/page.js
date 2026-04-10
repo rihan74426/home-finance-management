@@ -27,15 +27,16 @@ export default function HomePage() {
           borderBottom: "1px solid var(--glass-border)",
         }}
       >
+        {/* favicon.png — logo mark only, small */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Image
             src="/favicon.png"
-            alt="Homy"
+            alt="Homy logo"
             width={28}
             height={28}
             style={{ borderRadius: 6, objectFit: "cover" }}
           />
-          <div
+          <span
             style={{
               fontWeight: 800,
               fontSize: "1.1rem",
@@ -44,8 +45,9 @@ export default function HomePage() {
             }}
           >
             Homy
-          </div>
+          </span>
         </div>
+
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           {isLoaded && (
             <>
@@ -121,6 +123,15 @@ export default function HomePage() {
           gap: 24,
         }}
       >
+        {/* pageIcon.png — full branded logo in hero */}
+        <Image
+          src="/pageIcon.png"
+          alt="Homy"
+          width={72}
+          height={72}
+          style={{ borderRadius: 16, objectFit: "cover", marginBottom: 8 }}
+        />
+
         <div
           style={{
             display: "inline-flex",
@@ -135,7 +146,7 @@ export default function HomePage() {
             fontWeight: 600,
           }}
         >
-          🚀 Now in beta — BD &amp; PK first
+          Now in beta — BD &amp; PK first
         </div>
 
         <h1
@@ -204,32 +215,26 @@ export default function HomePage() {
         >
           {[
             {
-              icon: "💰",
               title: "Rent Ledger",
               desc: "Track payments. PDF exports. No more awkward reminders.",
             },
             {
-              icon: "🔐",
               title: "The Vault",
               desc: "WiFi passwords, door codes, lease docs — all in one place.",
             },
             {
-              icon: "✅",
               title: "Task Board",
               desc: "Assign chores, set due dates, never argue about cleaning again.",
             },
             {
-              icon: "🛒",
               title: "Grocery List",
               desc: "Shared, real-time. Any member can add or mark bought.",
             },
             {
-              icon: "💬",
               title: "House Chat",
               desc: "Threaded conversations, polls, and manager announcements.",
             },
             {
-              icon: "⚡",
               title: "Bill Splitting",
               desc: "Electricity, water, internet — split fairly among members.",
             },
@@ -245,9 +250,6 @@ export default function HomePage() {
                 backdropFilter: "blur(16px)",
               }}
             >
-              <div style={{ fontSize: "1.5rem", marginBottom: 10 }}>
-                {f.icon}
-              </div>
               <div
                 style={{
                   fontWeight: 700,
@@ -281,7 +283,7 @@ export default function HomePage() {
           color: "var(--faint)",
         }}
       >
-        © 2025 Homy · Built for Bangladesh, Pakistan & beyond
+        © 2025 Homy · Built for Bangladesh &amp; beyond
       </footer>
     </main>
   );

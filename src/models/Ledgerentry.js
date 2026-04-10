@@ -43,7 +43,7 @@ const LedgerEntrySchema = new Schema(
       type: String,
       trim: true,
       maxlength: 200,
-      default: "Rent", // e.g. "Rent — April 2025", "Electricity split"
+      default: "Rent",
     },
 
     // ── Amounts (integer, smallest currency unit) ─────────────────────────────
@@ -68,7 +68,7 @@ const LedgerEntrySchema = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: Object.values(PAYMENT_METHOD),
+      enum: [...Object.values(PAYMENT_METHOD), null],
       default: null,
     },
     paidAt: { type: Date, default: null },
@@ -79,14 +79,12 @@ const LedgerEntrySchema = new Schema(
     dueDate: { type: Date, required: true },
 
     // ── Notes ─────────────────────────────────────────────────────────────────
-    // memberNote: visible to both manager and the member
     memberNote: {
       type: String,
       maxlength: 500,
       default: "",
     },
     // managerNote: ONLY visible to the manager — never sent to the member
-    // This is where "said he'll pay the rest by 15th" lives
     managerNote: {
       type: String,
       maxlength: 500,
@@ -100,7 +98,7 @@ const LedgerEntrySchema = new Schema(
       required: true,
     },
 
-    // ── Bill link (optional — if this entry is a bill split) ──────────────────
+    // ── Bill link (optional) ──────────────────────────────────────────────────
     billId: {
       type: Schema.Types.ObjectId,
       ref: "Bill",
@@ -118,7 +116,7 @@ const LedgerEntrySchema = new Schema(
 LedgerEntrySchema.index({ houseId: 1, periodStart: -1 });
 LedgerEntrySchema.index({ membershipId: 1, periodStart: -1 });
 LedgerEntrySchema.index({ houseId: 1, status: 1 });
-LedgerEntrySchema.index({ dueDate: 1, status: 1 }); // for reminder jobs
+LedgerEntrySchema.index({ dueDate: 1, status: 1 });
 
 // ── Virtuals ──────────────────────────────────────────────────────────────────
 LedgerEntrySchema.virtual("amountOutstanding").get(function () {
@@ -130,7 +128,8 @@ LedgerEntrySchema.virtual("isOverdue").get(function () {
 });
 
 // ── Pre-save: auto-compute status from amounts ────────────────────────────────
-LedgerEntrySchema.pre("save", function (next) {
+// Mongoose v7+ — use async, do NOT call next()
+LedgerEntrySchema.pre("save", async function () {
   if (this.amountPaid >= this.amountDue) {
     this.status = PAYMENT_STATUS.PAID;
     if (!this.paidAt) this.paidAt = new Date();
@@ -141,7 +140,6 @@ LedgerEntrySchema.pre("save", function (next) {
   } else {
     this.status = PAYMENT_STATUS.PENDING;
   }
-  next();
 });
 
 // ── Static: strip manager-only fields before sending to a member ──────────────

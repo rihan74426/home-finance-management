@@ -71,7 +71,6 @@ export default function DashboardLayout({ children }) {
         display: "flex",
       }}
     >
-      {/* Sidebar */}
       <aside
         style={{
           width: 220,
@@ -85,34 +84,39 @@ export default function DashboardLayout({ children }) {
           background: "var(--bg-mid)",
         }}
       >
-        {/* Logo */}
+        {/* Logo: favicon.png (mark) + wordmark */}
         <div
           style={{
-            padding: "20px 20px 16px",
+            padding: "18px 20px 16px",
             borderBottom: "1px solid var(--glass-border)",
           }}
         >
           <Link
             href="/dashboard"
             style={{
-              fontWeight: 800,
-              fontSize: "1.1rem",
-              letterSpacing: "-0.02em",
-              color: "var(--text)",
-              textDecoration: "none",
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 9,
+              textDecoration: "none",
             }}
           >
             <Image
               src="/favicon.png"
               alt="Homy"
-              width={20}
-              height={20}
-              style={{ borderRadius: 6, objectFit: "cover" }}
+              width={24}
+              height={24}
+              style={{ borderRadius: 5, objectFit: "cover" }}
             />
-            <span style={{ display: "inline-block", marginLeft: 6 }}>Homy</span>
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: "1.05rem",
+                letterSpacing: "-0.02em",
+                color: "var(--text)",
+              }}
+            >
+              Homy
+            </span>
           </Link>
         </div>
 
@@ -135,7 +139,6 @@ export default function DashboardLayout({ children }) {
               >
                 <ChevronLeft size={13} /> All Houses
               </Link>
-
               {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
                 const fullHref = `/dashboard/${houseId}${href}`;
                 const active = pathname === fullHref;
@@ -201,7 +204,6 @@ export default function DashboardLayout({ children }) {
           )}
         </nav>
 
-        {/* User */}
         <div
           style={{
             padding: "16px 20px",
@@ -232,7 +234,6 @@ export default function DashboardLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main */}
       <main style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "28px" }}>{children}</div>
       </main>

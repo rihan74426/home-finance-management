@@ -8,6 +8,16 @@
 6. Vault — Second highest stickiness feature. WiFi password saved once = user never leaves.
 7. Task board — Third pillar of daily utility.
 
+to-dos: 10/4/26
+
+- The invite token should go to the user's email or phone, but for simplicity we'll just return it in the response for now. In a real app, you'd want to send this via email/SMS and not expose it in the API response. with catching the user name from the invite entry and save it as the user's name when new created.
+
+- the role based boundaries and limitations and access must be set and work out.
+
+Bill splitting — POST /api/houses/[id]/bills + split logic + ledger entries
+PDF export — Ledger export per member using @react-pdf/renderer
+SMS reminders — Twilio integration for rent due notifications via Bull queue
+
 # CLAUDE.md — Homy Project Intelligence
 
 > This file is the living memory of the Homy project. It tracks decisions, progress, current state, and what comes next. Update this file at every session. Claude reads this file first on every new conversation.

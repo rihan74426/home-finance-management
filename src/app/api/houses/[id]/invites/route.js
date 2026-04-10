@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import connectDB from "@/lib/db/mongoose";
 import User from "@/models/User";
 import Membership from "@/models/Membership";
@@ -18,12 +18,23 @@ export async function POST(req, { params }) {
   await connectDB();
   const { id } = await params;
 
-  const user = await User.findOne({ clerkId, deletedAt: null });
-  if (!user)
-    return Response.json(
-      { success: false, error: "User not found" },
-      { status: 404 }
-    );
+  let user = await User.findOne({ clerkId, deletedAt: null });
+  if (!user) {
+    const clerkUser = await (await clerkClient()).users.getUser(clerkId);
+    const email =
+      clerkUser.emailAddresses.find(
+        (e) => e.id === clerkUser.primaryEmailAddressId
+      )?.emailAddress ?? `${clerkId}@placeholder.homy`;
+    user = await User.create({
+      clerkId,
+      email,
+      name:
+        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
+        clerkUser.username ||
+        "User",
+      avatarUrl: clerkUser.imageUrl ?? null,
+    });
+  }
 
   const isManager = await Membership.isManager(user._id, id);
   if (!isManager)

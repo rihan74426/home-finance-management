@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import Image from "next/image";
-import { Home, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Home } from "lucide-react";
+import { HOUSE_TYPE } from "@/lib/constants";
 
-const HOUSE_TYPE_EMOJI = {
-  flat: "🏢",
-  villa: "🏡",
-  family: "🏠",
-  co_living: "🏘️",
-  dormitory: "🏫",
-  other: "🏠",
+const HOUSE_TYPE_LABEL = {
+  [HOUSE_TYPE.FLAT]: "Flat",
+  [HOUSE_TYPE.VILLA]: "Villa",
+  [HOUSE_TYPE.FAMILY]: "Family Home",
+  [HOUSE_TYPE.CO_LIVING]: "Co-Living",
+  [HOUSE_TYPE.DORMITORY]: "Dormitory",
+  [HOUSE_TYPE.OTHER]: "House",
 };
 
 export default function InvitePage() {
@@ -77,10 +78,8 @@ export default function InvitePage() {
         padding: 24,
       }}
     >
-      {/* Logo */}
-      <div
-        style={{ marginBottom: 28, display: "flex", justifyContent: "center" }}
-      >
+      {/* pageIcon.png — full branded logo */}
+      <div style={{ marginBottom: 28 }}>
         <Image
           src="/pageIcon.png"
           alt="Homy"
@@ -88,7 +87,7 @@ export default function InvitePage() {
           height={72}
           style={{
             objectFit: "contain",
-            borderRadius: 8,
+            borderRadius: 16,
             boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
           }}
         />
@@ -132,7 +131,7 @@ export default function InvitePage() {
             <h2
               style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: 8 }}
             >
-              You're in! 🎉
+              You're in!
             </h2>
             <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
               Welcome to {house?.name}. Redirecting to your dashboard…
@@ -164,12 +163,24 @@ export default function InvitePage() {
           </div>
         )}
 
-        {/* Ready state */}
+        {/* Ready */}
         {(status === "ready" || status === "accepting") && invite && (
           <>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>
-                {HOUSE_TYPE_EMOJI[house?.type] || "🏠"}
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: "var(--glass-bg-mid)",
+                  border: "1px solid var(--glass-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 12px",
+                }}
+              >
+                <Home size={22} color="var(--accent)" />
               </div>
               <h2
                 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: 4 }}
@@ -200,18 +211,19 @@ export default function InvitePage() {
               >
                 {house?.name}
               </div>
-              {house?.address?.city && (
-                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
-                  {house.address.city}
-                  {house.address.country ? `, ${house.address.country}` : ""}
-                </div>
-              )}
               <div
                 style={{
-                  marginTop: 8,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
+                  fontSize: "0.8rem",
+                  color: "var(--muted)",
+                  marginBottom: 8,
+                }}
+              >
+                {HOUSE_TYPE_LABEL[house?.type] || "House"}
+                {house?.address?.city ? ` · ${house.address.city}` : ""}
+                {house?.address?.country ? `, ${house.address.country}` : ""}
+              </div>
+              <span
+                style={{
                   fontSize: "0.72rem",
                   fontWeight: 600,
                   padding: "2px 10px",
@@ -219,13 +231,14 @@ export default function InvitePage() {
                   color: "var(--teal)",
                   background: "rgba(45,212,191,0.1)",
                   border: "1px solid rgba(45,212,191,0.22)",
+                  textTransform: "capitalize",
                 }}
               >
                 Joining as {invite.role}
-              </div>
+              </span>
             </div>
 
-            {/* If not signed in */}
+            {/* CTA */}
             {isLoaded && !isSignedIn ? (
               <div style={{ textAlign: "center" }}>
                 <p

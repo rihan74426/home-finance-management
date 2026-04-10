@@ -17,16 +17,17 @@ export const metadata = {
   description:
     "Homy is the household operating system for shared homes. Manage rent, bills, tasks, groceries, and more.",
   icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" }, // primary favicon (transparent / compact)
-    ],
-    shortcut: "/favicon.png", // legacy shortcut icon
-    apple: "/pageIcon.png", // apple-touch-icon (uses the branding name)
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: "/favicon.png",
+    apple: "/pageIcon.png",
   },
   openGraph: {
+    title: "Homy — Your home, finally organized.",
+    description: "Manage rent, bills, tasks, groceries, and more.",
     images: ["/pageIcon.png"],
   },
   twitter: {
+    card: "summary_large_image",
     images: ["/pageIcon.png"],
   },
 };
@@ -35,9 +36,8 @@ export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
       <html lang="en">
-        {/* ensure runtime link tags for browsers that rely on them */}
         <head>
-          <link rel="icon" href="/favicon.png" />
+          <link rel="icon" href="/favicon.png" type="image/png" />
           <link rel="shortcut icon" href="/favicon.png" />
           <link rel="apple-touch-icon" href="/pageIcon.png" />
           <meta name="theme-color" content="#0b1220" />
