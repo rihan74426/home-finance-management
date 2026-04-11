@@ -10,6 +10,7 @@
 
 to-dos: 10/4/26
 
+- we can make rules: also call with the rules in the alert when one is broken.
 - The invite token should go to the user's email or phone, but for simplicity we'll just return it in the response for now. In a real app, you'd want to send this via email/SMS and not expose it in the API response. with catching the user name from the invite entry and save it as the user's name when new created.
 
 - the role based boundaries and limitations and access must be set and work out.
