@@ -89,6 +89,13 @@ The project started as **EquiFlow** — a beautiful marketing website for a hous
 - Move-out checklist
 - Document storage
 
+### New: Member verification & rules alerts
+
+- Members upload documents (ID/lease) on their dashboard; manager verifies them.
+- Documents attached to the membership (scoped to house) and accessible to manager only while membership is active.
+- Managers can mark documents verified; system will notify the member.
+- Members can flag rule violations (rule-alert). Managers receive RULE_BROKEN notifications and can resolve or take action.
+
 ---
 
 ## Tech Stack
