@@ -83,11 +83,10 @@ BillSchema.index({ houseId: 1, type: 1 });
 BillSchema.index({ dueDate: 1, isSplit: 1 });
 
 // ── Pre-save: compute unitsConsumed from meter readings ───────────────────────
-BillSchema.pre("save", function (next) {
+BillSchema.pre("save", async function () {
   if (this.meterReadingStart !== null && this.meterReadingEnd !== null) {
     this.unitsConsumed = this.meterReadingEnd - this.meterReadingStart;
   }
-  next();
 });
 
 export const Bill = mongoose.models.Bill || mongoose.model("Bill", BillSchema);
