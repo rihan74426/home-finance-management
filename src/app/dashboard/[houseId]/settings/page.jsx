@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { HOUSE_TYPE } from "@/lib/constants";
+import { SettingsSkeleton } from "@/components/ui/Skeleton";
 
 const HOUSE_TYPES = [
   { value: "flat", label: "Flat / Apartment", emoji: "🏢" },
@@ -41,8 +43,6 @@ export default function SettingsPage() {
   const [isManager, setIsManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState(null);
   const [form, setForm] = useState({
     name: "",
     type: "flat",
@@ -82,10 +82,9 @@ export default function SettingsPage() {
   async function handleSave(e) {
     e.preventDefault();
     if (!form.name.trim()) {
-      setError("House name required.");
+      toast.error("House name is required.");
       return;
     }
-    setError(null);
     setSaving(true);
     try {
       const res = await fetch(`/api/houses/${houseId}`, {
@@ -95,24 +94,18 @@ export default function SettingsPage() {
       });
       const json = await res.json();
       if (!json.success) {
-        setError(json.error);
+        toast.error(json.error);
         return;
       }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      toast.success("Settings saved.");
     } catch {
-      setError("Network error.");
+      toast.error("Network error.");
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading settings…
-      </div>
-    );
+  if (loading) return <SettingsSkeleton />;
 
   if (!isManager)
     return (
@@ -138,49 +131,17 @@ export default function SettingsPage() {
             marginBottom: 4,
           }}
         >
-          House Settings ⚙️
+          House Settings
         </h1>
         <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
           Manage your house details and preferences.
         </p>
       </div>
 
-      {error && (
-        <div
-          style={{
-            background: "rgba(239,68,68,0.08)",
-            border: "1px solid rgba(239,68,68,0.2)",
-            borderRadius: 10,
-            padding: "12px 16px",
-            color: "#f87171",
-            fontSize: "0.825rem",
-            marginBottom: 20,
-          }}
-        >
-          {error}
-        </div>
-      )}
-      {saved && (
-        <div
-          style={{
-            background: "rgba(74,222,128,0.08)",
-            border: "1px solid rgba(74,222,128,0.2)",
-            borderRadius: 10,
-            padding: "12px 16px",
-            color: "#4ade80",
-            fontSize: "0.825rem",
-            marginBottom: 20,
-          }}
-        >
-          ✓ Settings saved.
-        </div>
-      )}
-
       <form
         onSubmit={handleSave}
         style={{ display: "flex", flexDirection: "column", gap: 20 }}
       >
-        {/* Name */}
         <div>
           <label style={lS}>House name *</label>
           <input
@@ -191,13 +152,12 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Type */}
         <div>
           <label style={lS}>Type</label>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(3,1fr)",
               gap: 8,
             }}
           >
@@ -234,7 +194,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Currency + Rent due day */}
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
         >
@@ -265,7 +224,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Address */}
         <div>
           <label style={lS}>Address</label>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -298,7 +256,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* House rules */}
         <div>
           <label style={lS}>House rules</label>
           <textarea
@@ -308,7 +265,7 @@ export default function SettingsPage() {
               resize: "vertical",
               fontFamily: "inherit",
             }}
-            placeholder="e.g. No guests after 11pm. Kitchen clean by midnight."
+            placeholder="e.g. No guests after 11pm."
             value={form.rules}
             onChange={(e) => setF("rules", e.target.value)}
             maxLength={2000}
@@ -350,7 +307,6 @@ export default function SettingsPage() {
           {saving ? "Saving…" : "Save settings"}
         </button>
       </form>
-
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );

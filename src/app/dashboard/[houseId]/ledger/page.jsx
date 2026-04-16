@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   BookOpen,
   Plus,
@@ -12,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { PAYMENT_METHOD } from "@/lib/constants";
+import { LedgerSkeleton } from "@/components/ui/Skeleton";
 
 const STATUS_CONFIG = {
   paid: {
@@ -130,7 +132,6 @@ export default function LedgerPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
 
   const [form, setForm] = useState({
     membershipId: "",
@@ -181,10 +182,9 @@ export default function LedgerPage() {
       !form.periodEnd ||
       !form.dueDate
     ) {
-      setError("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
-    setError(null);
     setSubmitting(true);
     try {
       const res = await fetch(`/api/houses/${houseId}/ledger`, {
@@ -198,7 +198,7 @@ export default function LedgerPage() {
       });
       const json = await res.json();
       if (!json.success) {
-        setError(json.error);
+        toast.error(json.error);
         return;
       }
       setEntries((p) => [json.data, ...p]);
@@ -215,19 +215,15 @@ export default function LedgerPage() {
         memberNote: "",
         managerNote: "",
       });
+      toast.success("Payment logged successfully.");
     } catch {
-      setError("Network error.");
+      toast.error("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading ledger…
-      </div>
-    );
+  if (loading) return <LedgerSkeleton />;
 
   const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
   const totalPaid = entries.reduce((s, e) => s + (e.amountPaid || 0), 0);
@@ -293,7 +289,7 @@ export default function LedgerPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(3,1fr)",
             gap: 12,
             marginBottom: 24,
           }}
@@ -394,21 +390,6 @@ export default function LedgerPage() {
                 <X size={18} />
               </button>
             </div>
-            {error && (
-              <div
-                style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  color: "#f87171",
-                  fontSize: "0.825rem",
-                  marginBottom: 16,
-                }}
-              >
-                {error}
-              </div>
-            )}
             <form
               onSubmit={handleSubmit}
               style={{ display: "flex", flexDirection: "column", gap: 14 }}
@@ -523,7 +504,6 @@ export default function LedgerPage() {
                 <label style={labelStyle}>Label</label>
                 <input
                   style={inputStyle}
-                  type="text"
                   placeholder="e.g. Rent — April 2025"
                   value={form.label}
                   onChange={(e) => setF("label", e.target.value)}
@@ -533,7 +513,6 @@ export default function LedgerPage() {
                 <label style={labelStyle}>Note for member</label>
                 <input
                   style={inputStyle}
-                  type="text"
                   placeholder="Visible to the member"
                   value={form.memberNote}
                   onChange={(e) => setF("memberNote", e.target.value)}
@@ -543,7 +522,6 @@ export default function LedgerPage() {
                 <label style={labelStyle}>Private note (manager only)</label>
                 <input
                   style={inputStyle}
-                  type="text"
                   placeholder="Only you can see this"
                   value={form.managerNote}
                   onChange={(e) => setF("managerNote", e.target.value)}
@@ -700,7 +678,7 @@ export default function LedgerPage() {
           ))}
         </div>
       )}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } select option { background: #0e1520; color: #f0ede8; }`}</style>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );
 }

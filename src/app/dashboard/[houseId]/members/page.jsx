@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Users,
   Crown,
@@ -13,6 +14,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { MembersSkeleton } from "@/components/ui/Skeleton";
 
 const ROLE_BADGE = {
   manager: {
@@ -119,8 +121,6 @@ export default function MembersPage() {
   const [house, setHouse] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Invite modal
   const [showInvite, setShowInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     email: "",
@@ -129,7 +129,6 @@ export default function MembersPage() {
     role: "member",
   });
   const [inviting, setInviting] = useState(false);
-  const [inviteError, setInviteError] = useState(null);
   const [inviteLink, setInviteLink] = useState(null);
   const [copied, setCopied] = useState(false);
   const setIF = (k, v) => setInviteForm((p) => ({ ...p, [k]: v }));
@@ -154,10 +153,9 @@ export default function MembersPage() {
   async function handleInvite(e) {
     e.preventDefault();
     if (!inviteForm.email && !inviteForm.phone) {
-      setInviteError("Email or phone required.");
+      toast.error("Email or phone number is required.");
       return;
     }
-    setInviteError(null);
     setInviting(true);
     try {
       const res = await fetch(`/api/houses/${houseId}/invites`, {
@@ -167,12 +165,13 @@ export default function MembersPage() {
       });
       const json = await res.json();
       if (!json.success) {
-        setInviteError(json.error);
+        toast.error(json.error);
         return;
       }
       setInviteLink(json.data.inviteUrl);
+      toast.success("Invite link created.");
     } catch {
-      setInviteError("Network error.");
+      toast.error("Network error.");
     } finally {
       setInviting(false);
     }
@@ -181,6 +180,7 @@ export default function MembersPage() {
   function copyLink() {
     navigator.clipboard.writeText(inviteLink);
     setCopied(true);
+    toast.success("Link copied to clipboard.");
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -188,15 +188,9 @@ export default function MembersPage() {
     setShowInvite(false);
     setInviteLink(null);
     setInviteForm({ email: "", phone: "", name: "", role: "member" });
-    setInviteError(null);
   }
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading members…
-      </div>
-    );
+  if (loading) return <MembersSkeleton />;
 
   return (
     <div>
@@ -292,7 +286,6 @@ export default function MembersPage() {
             </div>
 
             {inviteLink ? (
-              /* Success — show link */
               <div>
                 <div
                   style={{
@@ -311,7 +304,7 @@ export default function MembersPage() {
                       marginBottom: 6,
                     }}
                   >
-                    ✓ Invite link created!
+                    Invite link created!
                   </div>
                   <div
                     style={{
@@ -354,8 +347,7 @@ export default function MembersPage() {
                     textAlign: "center",
                   }}
                 >
-                  Link expires in 7 days. Share it with the person you're
-                  inviting.
+                  Link expires in 7 days.
                 </p>
                 <button
                   onClick={closeInvite}
@@ -375,98 +367,80 @@ export default function MembersPage() {
                 </button>
               </div>
             ) : (
-              /* Invite form */
-              <>
-                {inviteError && (
-                  <div
-                    style={{
-                      background: "rgba(239,68,68,0.08)",
-                      border: "1px solid rgba(239,68,68,0.2)",
-                      borderRadius: 8,
-                      padding: "10px 14px",
-                      color: "#f87171",
-                      fontSize: "0.825rem",
-                      marginBottom: 14,
-                    }}
+              <form
+                onSubmit={handleInvite}
+                style={{ display: "flex", flexDirection: "column", gap: 13 }}
+              >
+                <div>
+                  <label style={lS}>Name (optional)</label>
+                  <input
+                    style={iS}
+                    placeholder="Their name"
+                    value={inviteForm.name}
+                    onChange={(e) => setIF("name", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={lS}>Email</label>
+                  <input
+                    style={iS}
+                    type="email"
+                    placeholder="email@example.com"
+                    value={inviteForm.email}
+                    onChange={(e) => setIF("email", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={lS}>Or phone</label>
+                  <input
+                    style={iS}
+                    type="tel"
+                    placeholder="+880 1XXX XXXXXX"
+                    value={inviteForm.phone}
+                    onChange={(e) => setIF("phone", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={lS}>Role</label>
+                  <select
+                    style={{ ...iS, cursor: "pointer" }}
+                    value={inviteForm.role}
+                    onChange={(e) => setIF("role", e.target.value)}
                   >
-                    {inviteError}
-                  </div>
-                )}
-                <form
-                  onSubmit={handleInvite}
-                  style={{ display: "flex", flexDirection: "column", gap: 13 }}
+                    <option value="member">Member</option>
+                    <option value="guest">Guest (read-only)</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={inviting}
+                  style={{
+                    padding: "11px",
+                    borderRadius: 10,
+                    background: inviting
+                      ? "var(--glass-bg-mid)"
+                      : "var(--accent)",
+                    color: inviting ? "var(--muted)" : "#fff",
+                    fontWeight: 700,
+                    fontSize: "0.875rem",
+                    border: "none",
+                    cursor: inviting ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    marginTop: 4,
+                  }}
                 >
-                  <div>
-                    <label style={lS}>Name (optional)</label>
-                    <input
-                      style={iS}
-                      placeholder="Their name"
-                      value={inviteForm.name}
-                      onChange={(e) => setIF("name", e.target.value)}
+                  {inviting && (
+                    <Loader2
+                      size={14}
+                      style={{ animation: "spin 1s linear infinite" }}
                     />
-                  </div>
-                  <div>
-                    <label style={lS}>Email</label>
-                    <input
-                      style={iS}
-                      type="email"
-                      placeholder="email@example.com"
-                      value={inviteForm.email}
-                      onChange={(e) => setIF("email", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label style={lS}>Or phone</label>
-                    <input
-                      style={iS}
-                      type="tel"
-                      placeholder="+880 1XXX XXXXXX"
-                      value={inviteForm.phone}
-                      onChange={(e) => setIF("phone", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label style={lS}>Role</label>
-                    <select
-                      style={{ ...iS, cursor: "pointer" }}
-                      value={inviteForm.role}
-                      onChange={(e) => setIF("role", e.target.value)}
-                    >
-                      <option value="member">Member</option>
-                      <option value="guest">Guest (read-only)</option>
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={inviting}
-                    style={{
-                      padding: "11px",
-                      borderRadius: 10,
-                      background: inviting
-                        ? "var(--glass-bg-mid)"
-                        : "var(--accent)",
-                      color: inviting ? "var(--muted)" : "#fff",
-                      fontWeight: 700,
-                      fontSize: "0.875rem",
-                      border: "none",
-                      cursor: inviting ? "not-allowed" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      marginTop: 4,
-                    }}
-                  >
-                    {inviting && (
-                      <Loader2
-                        size={14}
-                        style={{ animation: "spin 1s linear infinite" }}
-                      />
-                    )}
-                    {inviting ? "Creating…" : "Create invite link"}
-                  </button>
-                </form>
-              </>
+                  )}
+                  {inviting ? "Creating…" : "Create invite link"}
+                </button>
+              </form>
             )}
           </div>
         </div>

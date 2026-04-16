@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Plus,
   X,
@@ -13,6 +14,7 @@ import {
   Flag,
 } from "lucide-react";
 import { TASK_PRIORITY, TASK_CATEGORY, TASK_STATUS } from "@/lib/constants";
+import { TasksSkeleton } from "@/components/ui/Skeleton";
 
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "var(--muted)" },
@@ -72,7 +74,6 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("active");
   const [form, setForm] = useState({
     title: "",
@@ -101,10 +102,9 @@ export default function TasksPage() {
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.title.trim()) {
-      setError("Title required");
+      toast.error("Task title is required.");
       return;
     }
-    setError(null);
     setSubmitting(true);
     try {
       const res = await fetch(`/api/houses/${houseId}/tasks`, {
@@ -114,7 +114,7 @@ export default function TasksPage() {
       });
       const json = await res.json();
       if (!json.success) {
-        setError(json.error);
+        toast.error(json.error);
         return;
       }
       setTasks((p) => [json.data, ...p]);
@@ -127,8 +127,9 @@ export default function TasksPage() {
         assignedTo: "",
         dueDate: "",
       });
+      toast.success("Task created.");
     } catch {
-      setError("Network error.");
+      toast.error("Network error.");
     } finally {
       setSubmitting(false);
     }
@@ -146,14 +147,17 @@ export default function TasksPage() {
       body: JSON.stringify({ status: newStatus }),
     });
     const json = await res.json();
-    if (!json.success)
+    if (!json.success) {
       setTasks((p) => p.map((t) => (t._id === task._id ? task : t)));
+      toast.error("Failed to update task.");
+    }
   }
 
   async function handleDelete(id) {
     if (!confirm("Delete this task?")) return;
     setTasks((p) => p.filter((t) => t._id !== id));
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    toast.success("Task deleted.");
   }
 
   const filtered = tasks.filter((t) => {
@@ -161,15 +165,9 @@ export default function TasksPage() {
     if (filter === "done") return t.status === TASK_STATUS.DONE;
     return true;
   });
-
   const activeCount = tasks.filter((t) => t.status !== TASK_STATUS.DONE).length;
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading tasks…
-      </div>
-    );
+  if (loading) return <TasksSkeleton />;
 
   return (
     <div>
@@ -225,7 +223,7 @@ export default function TasksPage() {
         </button>
       </div>
 
-      {/* Filter tabs */}
+      {/* Filters */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[
           ["active", "Active"],
@@ -303,21 +301,6 @@ export default function TasksPage() {
                 <X size={18} />
               </button>
             </div>
-            {error && (
-              <div
-                style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  color: "#f87171",
-                  fontSize: "0.825rem",
-                  marginBottom: 14,
-                }}
-              >
-                {error}
-              </div>
-            )}
             <form
               onSubmit={handleCreate}
               style={{ display: "flex", flexDirection: "column", gap: 13 }}

@@ -2,110 +2,107 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
+  BookOpen,
   Plus,
-  Copy,
-  Check,
-  Trash2,
   X,
   Loader2,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Wifi,
-  DoorOpen,
-  Key,
-  FileText,
-  Phone,
-  Folder,
-  Wrench,
-  MoreHorizontal,
+  CheckCircle,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
+import { PAYMENT_METHOD } from "@/lib/constants";
+import { LedgerSkeleton } from "@/components/ui/Skeleton";
 
-const TYPE_CONFIG = {
-  wifi: { label: "WiFi", icon: Wifi, f1: "Network name", f2: "Password" },
-  door_code: { label: "Door Code", icon: DoorOpen, f1: "Code", f2: "" },
-  gate_code: { label: "Gate Code", icon: Key, f1: "Code", f2: "" },
-  lease: { label: "Lease", icon: FileText, f1: "Details", f2: "" },
-  contact: { label: "Contact", icon: Phone, f1: "Phone / Email", f2: "Notes" },
-  document: { label: "Document", icon: Folder, f1: "Details", f2: "Notes" },
-  appliance: {
-    label: "Appliance",
-    icon: Wrench,
-    f1: "Model / Serial",
-    f2: "Notes",
+const STATUS_CONFIG = {
+  paid: {
+    label: "Paid",
+    color: "#4ade80",
+    bg: "rgba(74,222,128,0.1)",
+    border: "rgba(74,222,128,0.25)",
+    icon: CheckCircle,
   },
-  other: { label: "Other", icon: MoreHorizontal, f1: "Value", f2: "Notes" },
+  partial: {
+    label: "Partial",
+    color: "#fbbf24",
+    bg: "rgba(251,191,36,0.1)",
+    border: "rgba(251,191,36,0.25)",
+    icon: Clock,
+  },
+  pending: {
+    label: "Pending",
+    color: "var(--muted)",
+    bg: "var(--glass-bg)",
+    border: "var(--glass-border)",
+    icon: Clock,
+  },
+  overdue: {
+    label: "Overdue",
+    color: "#f87171",
+    bg: "rgba(248,113,113,0.1)",
+    border: "rgba(248,113,113,0.25)",
+    icon: AlertCircle,
+  },
 };
 
-function CopyBtn({ value }) {
-  const [copied, setCopied] = useState(false);
-  if (!value) return null;
+const PAYMENT_METHOD_LABELS = {
+  cash: "Cash",
+  bkash: "bKash",
+  nagad: "Nagad",
+  jazz_cash: "JazzCash",
+  easy_paisa: "EasyPaisa",
+  upi: "UPI",
+  bank_transfer: "Bank Transfer",
+  card: "Card",
+  other: "Other",
+};
+
+function fmtCurrency(amount, currency) {
+  if (amount == null) return "—";
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "BDT",
+      maximumFractionDigits: 0,
+    }).format(amount / 100);
+  } catch {
+    return `${amount / 100}`;
+  }
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function StatusBadge({ status }) {
+  const c = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const Icon = c.icon;
   return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}
+    <span
       style={{
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        color: copied ? "#4ade80" : "var(--muted)",
-        padding: 4,
-        lineHeight: 1,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: "0.72rem",
+        fontWeight: 600,
+        padding: "3px 9px",
+        borderRadius: 50,
+        color: c.color,
+        background: c.bg,
+        border: `1px solid ${c.border}`,
       }}
     >
-      {copied ? <Check size={13} /> : <Copy size={13} />}
-    </button>
+      <Icon size={11} /> {c.label}
+    </span>
   );
 }
 
-function SecretField({ value, label }) {
-  const [show, setShow] = useState(false);
-  if (!value) return null;
-  return (
-    <div
-      style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}
-    >
-      <span
-        style={{ fontSize: "0.75rem", color: "var(--muted)", flexShrink: 0 }}
-      >
-        {label}:
-      </span>
-      <span
-        style={{
-          fontSize: "0.82rem",
-          fontFamily: show ? "inherit" : "monospace",
-          color: "var(--text)",
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {show ? value : "••••••••"}
-      </span>
-      <button
-        onClick={() => setShow((s) => !s)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--muted)",
-          padding: 2,
-          lineHeight: 1,
-        }}
-      >
-        {show ? <EyeOff size={12} /> : <Eye size={12} />}
-      </button>
-      <CopyBtn value={value} />
-    </div>
-  );
-}
-
-const iS = {
+const inputStyle = {
   width: "100%",
   background: "var(--glass-bg)",
   border: "1px solid var(--glass-border)",
@@ -116,7 +113,7 @@ const iS = {
   outline: "none",
   boxSizing: "border-box",
 };
-const lS = {
+const labelStyle = {
   display: "block",
   fontSize: "0.75rem",
   fontWeight: 600,
@@ -126,93 +123,111 @@ const lS = {
   letterSpacing: "0.05em",
 };
 
-export default function VaultPage() {
+export default function LedgerPage() {
   const { houseId } = useParams();
-  const [items, setItems] = useState([]);
+  const [entries, setEntries] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [house, setHouse] = useState(null);
   const [isManager, setIsManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+
   const [form, setForm] = useState({
-    type: "wifi",
-    label: "",
-    primaryValue: "",
-    secondaryValue: "",
-    notes: "",
-    visibility: "all",
+    membershipId: "",
+    amountDue: "",
+    amountPaid: "",
+    label: "Rent",
+    paymentMethod: "cash",
+    periodStart: "",
+    periodEnd: "",
+    dueDate: "",
+    memberNote: "",
+    managerNote: "",
   });
-  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    fetch(`/api/houses/${houseId}/vault`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.success) {
-          setItems(j.data);
-          setIsManager(j.isManager);
-        }
-      })
-      .finally(() => setLoading(false));
+    async function load() {
+      const [lRes, mRes, hRes] = await Promise.all([
+        fetch(`/api/houses/${houseId}/ledger`),
+        fetch(`/api/houses/${houseId}/members`),
+        fetch(`/api/houses/${houseId}`),
+      ]);
+      const [lJson, mJson, hJson] = await Promise.all([
+        lRes.json(),
+        mRes.json(),
+        hRes.json(),
+      ]);
+      if (lJson.success) {
+        setEntries(lJson.data);
+        setIsManager(lJson.isManager);
+      }
+      if (mJson.success) setMembers(mJson.data);
+      if (hJson.success) setHouse(hJson.data);
+      setLoading(false);
+    }
+    load();
   }, [houseId]);
 
-  async function handleAdd(e) {
+  function setF(k, v) {
+    setForm((p) => ({ ...p, [k]: v }));
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.label.trim()) {
-      setError("Label required");
+    if (
+      !form.membershipId ||
+      !form.amountDue ||
+      !form.periodStart ||
+      !form.periodEnd ||
+      !form.dueDate
+    ) {
+      toast.error("Please fill in all required fields.");
       return;
     }
-    setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/houses/${houseId}/vault`, {
+      const res = await fetch(`/api/houses/${houseId}/ledger`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          amountDue: Math.round(parseFloat(form.amountDue) * 100),
+          amountPaid: Math.round(parseFloat(form.amountPaid || 0) * 100),
+        }),
       });
       const json = await res.json();
       if (!json.success) {
-        setError(json.error);
+        toast.error(json.error);
         return;
       }
-      setItems((p) => [json.data, ...p]);
+      setEntries((p) => [json.data, ...p]);
       setShowForm(false);
       setForm({
-        type: "wifi",
-        label: "",
-        primaryValue: "",
-        secondaryValue: "",
-        notes: "",
-        visibility: "all",
+        membershipId: "",
+        amountDue: "",
+        amountPaid: "",
+        label: "Rent",
+        paymentMethod: "cash",
+        periodStart: "",
+        periodEnd: "",
+        dueDate: "",
+        memberNote: "",
+        managerNote: "",
       });
+      toast.success("Payment logged successfully.");
     } catch {
-      setError("Network error.");
+      toast.error("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this vault item?")) return;
-    await fetch(`/api/vault/${id}`, { method: "DELETE" });
-    setItems((p) => p.filter((i) => i._id !== id));
-  }
+  if (loading) return <LedgerSkeleton />;
 
-  const grouped = items.reduce((acc, item) => {
-    const g = item.type || "other";
-    if (!acc[g]) acc[g] = [];
-    acc[g].push(item);
-    return acc;
-  }, {});
-
-  const tc = TYPE_CONFIG[form.type] || TYPE_CONFIG.other;
-
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading vault…
-      </div>
-    );
+  const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
+  const totalPaid = entries.reduce((s, e) => s + (e.amountPaid || 0), 0);
+  const overdueCount = entries.filter((e) => e.status === "overdue").length;
 
   return (
     <div>
@@ -221,7 +236,7 @@ export default function VaultPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 28,
+          marginBottom: 24,
         }}
       >
         <div>
@@ -233,7 +248,7 @@ export default function VaultPage() {
               marginBottom: 4,
             }}
           >
-            <ShieldCheck size={20} color="var(--accent)" />
+            <BookOpen size={20} color="var(--accent)" />
             <h1
               style={{
                 fontSize: "1.4rem",
@@ -241,33 +256,92 @@ export default function VaultPage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              The Vault
+              Rent Ledger
             </h1>
           </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-            Household info, encrypted and always accessible.
+            {house?.name} · {house?.currency}
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "9px 18px",
-            borderRadius: 50,
-            background: "var(--accent)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: "0.825rem",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <Plus size={14} /> Add item
-        </button>
+        {isManager && (
+          <button
+            onClick={() => setShowForm(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 18px",
+              borderRadius: 50,
+              background: "var(--accent)",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: "0.825rem",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={14} /> Log payment
+          </button>
+        )}
       </div>
 
+      {isManager && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3,1fr)",
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          {[
+            {
+              label: "Total Due",
+              value: fmtCurrency(totalDue, house?.currency),
+              color: "var(--text)",
+            },
+            {
+              label: "Total Collected",
+              value: fmtCurrency(totalPaid, house?.currency),
+              color: "#4ade80",
+            },
+            {
+              label: "Overdue",
+              value: overdueCount,
+              color: overdueCount > 0 ? "#f87171" : "var(--muted)",
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: 12,
+                padding: "16px 18px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--muted)",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {s.label}
+              </div>
+              <div
+                style={{ fontSize: "1.3rem", fontWeight: 800, color: s.color }}
+              >
+                {s.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
       {showForm && (
         <div
           style={{
@@ -288,7 +362,7 @@ export default function VaultPage() {
               borderRadius: 16,
               padding: 28,
               width: "100%",
-              maxWidth: 420,
+              maxWidth: 480,
               maxHeight: "90vh",
               overflowY: "auto",
             }}
@@ -301,8 +375,8 @@ export default function VaultPage() {
                 marginBottom: 20,
               }}
             >
-              <h2 style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-                Add to Vault
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 800 }}>
+                Log Payment
               </h2>
               <button
                 onClick={() => setShowForm(false)}
@@ -316,92 +390,143 @@ export default function VaultPage() {
                 <X size={18} />
               </button>
             </div>
-            {error && (
-              <div
-                style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  color: "#f87171",
-                  fontSize: "0.825rem",
-                  marginBottom: 14,
-                }}
-              >
-                {error}
-              </div>
-            )}
             <form
-              onSubmit={handleAdd}
-              style={{ display: "flex", flexDirection: "column", gap: 13 }}
+              onSubmit={handleSubmit}
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
             >
               <div>
-                <label style={lS}>Type</label>
+                <label style={labelStyle}>Member *</label>
                 <select
-                  style={{ ...iS, cursor: "pointer" }}
-                  value={form.type}
-                  onChange={(e) => setF("type", e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                  value={form.membershipId}
+                  onChange={(e) => setF("membershipId", e.target.value)}
                 >
-                  {Object.entries(TYPE_CONFIG).map(([v, c]) => (
-                    <option key={v} value={v}>
-                      {c.label}
+                  <option value="">Select member…</option>
+                  {members.map((m) => (
+                    <option key={m.membershipId} value={m.membershipId}>
+                      {m.name}
                     </option>
                   ))}
                 </select>
               </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>
+                    Amount Due ({house?.currency}) *
+                  </label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 8000"
+                    value={form.amountDue}
+                    onChange={(e) => setF("amountDue", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Amount Paid</label>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={form.amountPaid}
+                    onChange={(e) => setF("amountPaid", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>Period Start *</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={form.periodStart}
+                    onChange={(e) => setF("periodStart", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Period End *</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={form.periodEnd}
+                    onChange={(e) => setF("periodEnd", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>Due Date *</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e) => setF("dueDate", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Payment Method</label>
+                  <select
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                    value={form.paymentMethod}
+                    onChange={(e) => setF("paymentMethod", e.target.value)}
+                  >
+                    {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div>
-                <label style={lS}>Label *</label>
+                <label style={labelStyle}>Label</label>
                 <input
-                  style={iS}
-                  placeholder="e.g. Home WiFi"
+                  style={inputStyle}
+                  placeholder="e.g. Rent — April 2025"
                   value={form.label}
                   onChange={(e) => setF("label", e.target.value)}
                 />
               </div>
-              {tc.f1 && (
-                <div>
-                  <label style={lS}>{tc.f1}</label>
-                  <input
-                    style={iS}
-                    placeholder={tc.f1}
-                    value={form.primaryValue}
-                    onChange={(e) => setF("primaryValue", e.target.value)}
-                  />
-                </div>
-              )}
-              {tc.f2 && (
-                <div>
-                  <label style={lS}>{tc.f2}</label>
-                  <input
-                    style={iS}
-                    placeholder={tc.f2}
-                    value={form.secondaryValue}
-                    onChange={(e) => setF("secondaryValue", e.target.value)}
-                  />
-                </div>
-              )}
               <div>
-                <label style={lS}>Notes</label>
+                <label style={labelStyle}>Note for member</label>
                 <input
-                  style={iS}
-                  placeholder="Optional"
-                  value={form.notes}
-                  onChange={(e) => setF("notes", e.target.value)}
+                  style={inputStyle}
+                  placeholder="Visible to the member"
+                  value={form.memberNote}
+                  onChange={(e) => setF("memberNote", e.target.value)}
                 />
               </div>
-              {isManager && (
-                <div>
-                  <label style={lS}>Visibility</label>
-                  <select
-                    style={{ ...iS, cursor: "pointer" }}
-                    value={form.visibility}
-                    onChange={(e) => setF("visibility", e.target.value)}
-                  >
-                    <option value="all">All members</option>
-                    <option value="manager_only">Manager only</option>
-                  </select>
-                </div>
-              )}
+              <div>
+                <label style={labelStyle}>Private note (manager only)</label>
+                <input
+                  style={inputStyle}
+                  placeholder="Only you can see this"
+                  value={form.managerNote}
+                  onChange={(e) => setF("managerNote", e.target.value)}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={submitting}
@@ -413,7 +538,7 @@ export default function VaultPage() {
                     : "var(--accent)",
                   color: submitting ? "var(--muted)" : "#fff",
                   fontWeight: 700,
-                  fontSize: "0.875rem",
+                  fontSize: "0.9rem",
                   border: "none",
                   cursor: submitting ? "not-allowed" : "pointer",
                   display: "flex",
@@ -425,18 +550,18 @@ export default function VaultPage() {
               >
                 {submitting && (
                   <Loader2
-                    size={14}
+                    size={15}
                     style={{ animation: "spin 1s linear infinite" }}
                   />
                 )}
-                {submitting ? "Saving…" : "Save to Vault"}
+                {submitting ? "Saving…" : "Save entry"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {Object.keys(grouped).length === 0 ? (
+      {entries.length === 0 ? (
         <div
           style={{
             textAlign: "center",
@@ -444,127 +569,113 @@ export default function VaultPage() {
             color: "var(--muted)",
           }}
         >
-          <ShieldCheck size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p>Your vault is empty. Start with your WiFi password.</p>
+          <BookOpen size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <p>
+            {isManager
+              ? "No entries yet. Log the first payment."
+              : "No payment records yet."}
+          </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {Object.entries(grouped).map(([type, typeItems]) => {
-            const tc2 = TYPE_CONFIG[type] || TYPE_CONFIG.other;
-            const TypeIcon = tc2.icon;
-            return (
-              <div key={type}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    color: "var(--muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: 8,
-                  }}
-                >
-                  <TypeIcon size={12} />
-                  {tc2.label}
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 7 }}
-                >
-                  {typeItems.map((item) => (
-                    <div
-                      key={item._id}
-                      style={{
-                        background: "var(--glass-bg)",
-                        border: "1px solid var(--glass-border)",
-                        borderRadius: 12,
-                        padding: "13px 16px",
-                      }}
-                    >
-                      <div
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {entries.map((e) => (
+            <div
+              key={e._id}
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                borderRadius: 12,
+                padding: "14px 18px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 4,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                      {e.label || "Rent"}
+                    </span>
+                    <StatusBadge status={e.status} />
+                    {e.paymentMethod && (
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          justifyContent: "space-between",
-                          gap: 8,
+                          fontSize: "0.7rem",
+                          color: "var(--muted)",
+                          background: "var(--glass-bg-mid)",
+                          padding: "2px 7px",
+                          borderRadius: 50,
                         }}
                       >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 7,
-                              marginBottom: 2,
-                            }}
-                          >
-                            <span
-                              style={{ fontWeight: 700, fontSize: "0.9rem" }}
-                            >
-                              {item.label}
-                            </span>
-                            {item.visibility === "manager_only" && (
-                              <span
-                                style={{
-                                  fontSize: "0.65rem",
-                                  color: "var(--accent)",
-                                  background: "var(--accent-dim)",
-                                  border: "1px solid var(--accent-border)",
-                                  padding: "1px 7px",
-                                  borderRadius: 50,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Manager only
-                              </span>
-                            )}
-                          </div>
-                          {item.primaryValue && (
-                            <SecretField
-                              value={item.primaryValue}
-                              label={tc2.f1 || "Value"}
-                            />
-                          )}
-                          {item.secondaryValue && (
-                            <SecretField
-                              value={item.secondaryValue}
-                              label={tc2.f2 || "Secondary"}
-                            />
-                          )}
-                          {item.notes && !item.secondaryValue && (
-                            <div
-                              style={{
-                                fontSize: "0.78rem",
-                                color: "var(--muted)",
-                                marginTop: 4,
-                              }}
-                            >
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "var(--muted)",
-                            padding: 4,
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                        {PAYMENT_METHOD_LABELS[e.paymentMethod] ||
+                          e.paymentMethod}
+                      </span>
+                    )}
+                  </div>
+                  {isManager && e.membershipId?.userId && (
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        color: "var(--teal)",
+                        marginBottom: 3,
+                      }}
+                    >
+                      {e.membershipId.userId.name}
                     </div>
-                  ))}
+                  )}
+                  <div style={{ fontSize: "0.775rem", color: "var(--muted)" }}>
+                    {fmtDate(e.periodStart)} – {fmtDate(e.periodEnd)} · Due{" "}
+                    {fmtDate(e.dueDate)}
+                  </div>
+                  {e.memberNote && (
+                    <div
+                      style={{
+                        fontSize: "0.775rem",
+                        color: "var(--muted)",
+                        marginTop: 4,
+                      }}
+                    >
+                      "{e.memberNote}"
+                    </div>
+                  )}
+                  {isManager && e.managerNote && (
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--accent)",
+                        marginTop: 3,
+                      }}
+                    >
+                      {e.managerNote}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+                    {fmtCurrency(e.amountPaid, house?.currency)}
+                  </div>
+                  {e.amountPaid !== e.amountDue && (
+                    <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
+                      of {fmtCurrency(e.amountDue, house?.currency)}
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>

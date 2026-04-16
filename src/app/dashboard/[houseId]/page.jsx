@@ -10,7 +10,9 @@ import {
   ShoppingCart,
   MessageSquare,
   Users,
+  Zap,
 } from "lucide-react";
+import { HouseOverviewSkeleton } from "@/components/ui/Skeleton";
 
 const QUICK_LINKS = [
   {
@@ -18,6 +20,12 @@ const QUICK_LINKS = [
     icon: BookOpen,
     label: "Ledger",
     desc: "Track rent & payments",
+  },
+  {
+    href: "bills",
+    icon: Zap,
+    label: "Bills",
+    desc: "Utilities & bill splitting",
   },
   {
     href: "vault",
@@ -52,27 +60,15 @@ export default function HousePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/houses");
-        const json = await res.json();
-        if (json.success) {
-          const found = json.data.find((h) => h._id === houseId);
-          setHouse(found ?? null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    fetch(`/api/houses/${houseId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setHouse(j.data);
+      })
+      .finally(() => setLoading(false));
   }, [houseId]);
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading…
-      </div>
-    );
+  if (loading) return <HouseOverviewSkeleton />;
   if (!house)
     return (
       <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>

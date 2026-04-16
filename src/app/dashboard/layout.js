@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 import {
   LayoutDashboard,
   BookOpen,
@@ -17,6 +18,7 @@ import {
   Settings,
   ChevronLeft,
   Home,
+  Zap,
 } from "lucide-react";
 
 const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
@@ -24,6 +26,7 @@ const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
 const HOUSE_NAV = [
   { href: "", icon: LayoutDashboard, label: "Overview" },
   { href: "/ledger", icon: BookOpen, label: "Ledger" },
+  { href: "/bills", icon: Zap, label: "Bills" },
   { href: "/vault", icon: ShieldCheck, label: "Vault" },
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
@@ -71,6 +74,23 @@ export default function DashboardLayout({ children }) {
         display: "flex",
       }}
     >
+      {/* Toaster — global toast notifications */}
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--bg-mid)",
+            border: "1px solid var(--glass-border)",
+            color: "var(--text)",
+            fontSize: "0.875rem",
+          },
+          classNames: {
+            success: "toast-success",
+            error: "toast-error",
+          },
+        }}
+      />
+
       <aside
         style={{
           width: 220,
@@ -84,7 +104,7 @@ export default function DashboardLayout({ children }) {
           background: "var(--bg-mid)",
         }}
       >
-        {/* Logo: favicon.png (mark) + wordmark */}
+        {/* Logo */}
         <div
           style={{
             padding: "18px 20px 16px",
