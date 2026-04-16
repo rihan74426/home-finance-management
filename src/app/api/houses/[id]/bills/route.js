@@ -4,9 +4,15 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import { Bill } from "@/models/Bills";
 import { ROLES, BILL_TYPE, BILL_SPLIT_TYPE } from "@/lib/constants";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 // GET /api/houses/[id]/bills
 export async function GET(req, { params }) {
+  // rate limit: listing / reads
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "read");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(

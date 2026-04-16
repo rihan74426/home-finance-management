@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { PAYMENT_METHOD } from "@/lib/constants";
 import { LedgerSkeleton } from "@/components/ui/Skeleton";
@@ -132,6 +133,7 @@ export default function LedgerPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [form, setForm] = useState({
     membershipId: "",
@@ -223,6 +225,33 @@ export default function LedgerPage() {
     }
   }
 
+  async function handleExport(membershipId) {
+    setExporting(true);
+    try {
+      const url = membershipId
+        ? `/api/houses/${houseId}/ledger/export?membershipId=${membershipId}`
+        : `/api/houses/${houseId}/ledger/export`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        toast.error(json.error || "Export failed.");
+        return;
+      }
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const cd = res.headers.get("content-disposition") || "";
+      link.download = cd.match(/filename="(.+?)"/)?.[1] || "ledger.pdf";
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.success("Ledger exported as PDF.");
+    } catch {
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (loading) return <LedgerSkeleton />;
 
   const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
@@ -263,26 +292,55 @@ export default function LedgerPage() {
             {house?.name} · {house?.currency}
           </p>
         </div>
-        {isManager && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => handleExport(null)}
+            disabled={exporting}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              padding: "9px 18px",
+              padding: "9px 14px",
               borderRadius: 50,
-              background: "var(--accent)",
-              color: "#fff",
+              background: "var(--glass-bg-mid)",
+              color: exporting ? "var(--muted)" : "var(--text)",
               fontWeight: 600,
-              fontSize: "0.825rem",
-              border: "none",
-              cursor: "pointer",
+              fontSize: "0.8rem",
+              border: "1px solid var(--glass-border)",
+              cursor: exporting ? "not-allowed" : "pointer",
             }}
           >
-            <Plus size={14} /> Log payment
+            {exporting ? (
+              <Loader2
+                size={13}
+                style={{ animation: "spin 1s linear infinite" }}
+              />
+            ) : (
+              <Download size={13} />
+            )}
+            Export PDF
           </button>
-        )}
+          {isManager && (
+            <button
+              onClick={() => setShowForm(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "9px 18px",
+                borderRadius: 50,
+                background: "var(--accent)",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: "0.825rem",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Plus size={14} /> Log payment
+            </button>
+          )}
+        </div>
       </div>
 
       {isManager && (
@@ -341,7 +399,7 @@ export default function LedgerPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Log Payment Modal */}
       {showForm && (
         <div
           style={{
@@ -671,6 +729,26 @@ export default function LedgerPage() {
                     <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
                       of {fmtCurrency(e.amountDue, house?.currency)}
                     </div>
+                  )}
+                  {/* Manager: per-member export link */}
+                  {isManager && e.membershipId?._id && (
+                    <button
+                      onClick={() => handleExport(e.membershipId._id)}
+                      disabled={exporting}
+                      style={{
+                        marginTop: 6,
+                        fontSize: "0.68rem",
+                        color: "var(--muted)",
+                        background: "none",
+                        border: "none",
+                        cursor: exporting ? "not-allowed" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                      }}
+                    >
+                      <Download size={10} /> Export
+                    </button>
                   )}
                 </div>
               </div>
