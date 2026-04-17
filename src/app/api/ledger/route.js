@@ -3,10 +3,15 @@ import connectDB from "@/lib/db/mongoose";
 import User from "@/models/User";
 import Membership from "@/models/Membership";
 import LedgerEntry from "@/models/Ledgerentry";
-import { ROLES, PAYMENT_METHOD, LEDGER_TYPE } from "@/lib/constants";
+import {
+  ROLES,
+  PAYMENT_METHOD,
+  LEDGER_TYPE,
+  NOTIFICATION_TYPE,
+} from "@/lib/constants";
+import { createNotification } from "@/lib/notifications";
 import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
-// GET /api/houses/[id]/ledger
 export async function GET(req, { params }) {
   // rate limit: read
   const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
@@ -45,7 +50,6 @@ export async function GET(req, { params }) {
 
   let entries;
   if (isManager) {
-    // Manager sees all entries with member info
     entries = await LedgerEntry.find({ houseId: id })
       .populate({
         path: "membershipId",
@@ -55,7 +59,6 @@ export async function GET(req, { params }) {
       .sort({ periodStart: -1 })
       .lean();
   } else {
-    // Member sees only their own entries, without managerNote
     entries = await LedgerEntry.find({
       houseId: id,
       membershipId: membership._id,
@@ -68,7 +71,6 @@ export async function GET(req, { params }) {
   return Response.json({ success: true, data: entries, isManager });
 }
 
-// POST /api/houses/[id]/ledger — log a payment (manager only)
 export async function POST(req, { params }) {
   // rate limit: write
   const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
@@ -114,31 +116,28 @@ export async function POST(req, { params }) {
     type,
   } = body;
 
-  if (!membershipId || !amountDue || !periodStart || !periodEnd || !dueDate) {
+  if (!membershipId || !amountDue || !periodStart || !periodEnd || !dueDate)
     return Response.json(
       { success: false, error: "Missing required fields" },
       { status: 400 }
     );
-  }
 
-  // Verify membershipId belongs to this house
   const targetMembership = await Membership.findOne({
     _id: membershipId,
     houseId: id,
     isActive: true,
-  });
+  }).populate("userId", "name");
   if (!targetMembership)
     return Response.json(
       { success: false, error: "Membership not found" },
       { status: 404 }
     );
 
-  if (paymentMethod && !Object.values(PAYMENT_METHOD).includes(paymentMethod)) {
+  if (paymentMethod && !Object.values(PAYMENT_METHOD).includes(paymentMethod))
     return Response.json(
       { success: false, error: "Invalid payment method" },
       { status: 400 }
     );
-  }
 
   const entry = await LedgerEntry.create({
     houseId: id,
@@ -154,6 +153,21 @@ export async function POST(req, { params }) {
     memberNote: memberNote || "",
     managerNote: managerNote || "",
     loggedBy: user._id,
+  });
+
+  // Notify the member
+  const isPaid = (amountPaid ?? 0) >= amountDue;
+  await createNotification({
+    userId: targetMembership.userId._id,
+    houseId: id,
+    type: isPaid ? NOTIFICATION_TYPE.RENT_PAID : NOTIFICATION_TYPE.RENT_DUE,
+    title: isPaid
+      ? `Payment logged — ${label || "Rent"}`
+      : `Rent entry added — ${label || "Rent"}`,
+    body: isPaid
+      ? `Your payment has been recorded by the manager.`
+      : `A rent entry was created for you. Amount due: ${amountDue / 100}.`,
+    meta: { entryId: entry._id },
   });
 
   return Response.json({ success: true, data: entry }, { status: 201 });

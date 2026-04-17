@@ -9,9 +9,15 @@ import {
   TASK_RECURRENCE,
   TASK_CATEGORY,
 } from "@/lib/constants";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 // GET /api/houses/[id]/tasks
 export async function GET(req, { params }) {
+  // rate limit: list tasks (reads)
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "read");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -64,6 +70,11 @@ export async function GET(req, { params }) {
 
 // POST /api/houses/[id]/tasks
 export async function POST(req, { params }) {
+  // rate limit: create task (write)
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(

@@ -4,14 +4,15 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import Task from "@/models/Task";
 import {
-  ROLES,
   TASK_STATUS,
   TASK_PRIORITY,
+  TASK_RECURRENCE,
   TASK_CATEGORY,
+  NOTIFICATION_TYPE,
 } from "@/lib/constants";
+import { createNotification } from "@/lib/notifications";
 
-// PATCH /api/tasks/[taskId]
-export async function PATCH(req, { params }) {
+export async function GET(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -20,7 +21,7 @@ export async function PATCH(req, { params }) {
     );
 
   await connectDB();
-  const { taskId } = await params;
+  const { id } = await params;
 
   const user = await User.findOne({ clerkId, deletedAt: null });
   if (!user)
@@ -29,16 +30,9 @@ export async function PATCH(req, { params }) {
       { status: 404 }
     );
 
-  const task = await Task.findOne({ _id: taskId, deletedAt: null });
-  if (!task)
-    return Response.json(
-      { success: false, error: "Task not found" },
-      { status: 404 }
-    );
-
   const membership = await Membership.findOne({
     userId: user._id,
-    houseId: task.houseId,
+    houseId: id,
     isActive: true,
   });
   if (!membership)
@@ -47,42 +41,28 @@ export async function PATCH(req, { params }) {
       { status: 403 }
     );
 
-  const isManager = membership.role === ROLES.MANAGER;
-  const body = await req.json();
+  const { searchParams } = new URL(req.url);
+  const statusFilter = searchParams.get("status");
+  const query = { houseId: id, deletedAt: null };
+  if (statusFilter) query.status = statusFilter;
 
-  // Complete / reopen — any member can do this
-  if (body.status === TASK_STATUS.DONE && task.status !== TASK_STATUS.DONE) {
-    task.status = TASK_STATUS.DONE;
-    task.completedAt = new Date();
-    task.completedBy = user._id;
-  } else if (body.status === TASK_STATUS.TODO) {
-    task.status = TASK_STATUS.TODO;
-    task.completedAt = null;
-    task.completedBy = null;
-  } else if (body.status === TASK_STATUS.IN_PROGRESS) {
-    task.status = TASK_STATUS.IN_PROGRESS;
-  }
+  const tasks = await Task.find(query)
+    .populate({
+      path: "assignedTo",
+      populate: { path: "userId", select: "name avatarUrl" },
+    })
+    .populate("createdBy", "name")
+    .sort({ status: 1, dueDate: 1, createdAt: -1 })
+    .lean();
 
-  // Edit fields — creator or manager
-  if (isManager || String(task.createdBy) === String(user._id)) {
-    if (body.title) task.title = body.title.trim();
-    if (body.description !== undefined) task.description = body.description;
-    if (body.priority && Object.values(TASK_PRIORITY).includes(body.priority))
-      task.priority = body.priority;
-    if (body.category && Object.values(TASK_CATEGORY).includes(body.category))
-      task.category = body.category;
-    if (body.dueDate !== undefined)
-      task.dueDate = body.dueDate ? new Date(body.dueDate) : null;
-    if (body.assignedTo !== undefined)
-      task.assignedTo = body.assignedTo || null;
-  }
-
-  await task.save();
-  return Response.json({ success: true, data: task });
+  return Response.json({
+    success: true,
+    data: tasks,
+    myMembershipId: membership._id,
+  });
 }
 
-// DELETE /api/tasks/[taskId]
-export async function DELETE(req, { params }) {
+export async function POST(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -91,7 +71,7 @@ export async function DELETE(req, { params }) {
     );
 
   await connectDB();
-  const { taskId } = await params;
+  const { id } = await params;
 
   const user = await User.findOne({ clerkId, deletedAt: null });
   if (!user)
@@ -100,16 +80,9 @@ export async function DELETE(req, { params }) {
       { status: 404 }
     );
 
-  const task = await Task.findOne({ _id: taskId, deletedAt: null });
-  if (!task)
-    return Response.json(
-      { success: false, error: "Task not found" },
-      { status: 404 }
-    );
-
   const membership = await Membership.findOne({
     userId: user._id,
-    houseId: task.houseId,
+    houseId: id,
     isActive: true,
   });
   if (!membership)
@@ -118,14 +91,68 @@ export async function DELETE(req, { params }) {
       { status: 403 }
     );
 
-  const isManager = membership.role === ROLES.MANAGER;
-  if (!isManager && String(task.createdBy) !== String(user._id)) {
+  const {
+    title,
+    description,
+    category,
+    priority,
+    assignedTo,
+    dueDate,
+    recurrence,
+  } = await req.json();
+
+  if (!title?.trim())
     return Response.json(
-      { success: false, error: "Not authorized" },
-      { status: 403 }
+      { success: false, error: "Title required" },
+      { status: 400 }
     );
+
+  let assignedMembership = null;
+  if (assignedTo) {
+    assignedMembership = await Membership.findOne({
+      _id: assignedTo,
+      houseId: id,
+      isActive: true,
+    }).populate("userId", "name");
+    if (!assignedMembership)
+      return Response.json(
+        { success: false, error: "Invalid assignee" },
+        { status: 400 }
+      );
   }
 
-  await Task.findByIdAndUpdate(taskId, { $set: { deletedAt: new Date() } });
-  return Response.json({ success: true });
+  const task = await Task.create({
+    houseId: id,
+    createdBy: user._id,
+    title: title.trim(),
+    description: description || "",
+    category: Object.values(TASK_CATEGORY).includes(category)
+      ? category
+      : TASK_CATEGORY.OTHER,
+    priority: Object.values(TASK_PRIORITY).includes(priority)
+      ? priority
+      : TASK_PRIORITY.NORMAL,
+    assignedTo: assignedTo || null,
+    dueDate: dueDate ? new Date(dueDate) : null,
+    recurrence: Object.values(TASK_RECURRENCE).includes(recurrence)
+      ? recurrence
+      : TASK_RECURRENCE.NONE,
+  });
+
+  // Notify assignee (only if not assigning to yourself)
+  if (
+    assignedMembership &&
+    String(assignedMembership.userId._id) !== String(user._id)
+  ) {
+    await createNotification({
+      userId: assignedMembership.userId._id,
+      houseId: id,
+      type: NOTIFICATION_TYPE.TASK_ASSIGNED,
+      title: `Task assigned: ${title}`,
+      body: `${user.name} assigned you a task.`,
+      meta: { taskId: task._id },
+    });
+  }
+
+  return Response.json({ success: true, data: task }, { status: 201 });
 }

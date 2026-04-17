@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter, usePathname, useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
@@ -19,10 +19,12 @@ import {
   ChevronLeft,
   Home,
   Zap,
+  Bell,
+  X,
+  Check,
 } from "lucide-react";
 
 const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
-
 const HOUSE_NAV = [
   { href: "", icon: LayoutDashboard, label: "Overview" },
   { href: "/ledger", icon: BookOpen, label: "Ledger" },
@@ -35,18 +37,267 @@ const HOUSE_NAV = [
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
+function fmtTime(d) {
+  const diff = Date.now() - new Date(d);
+  if (diff < 60000) return "just now";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function NotificationPanel({ onClose }) {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/notifications?limit=20")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setNotifications(j.data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function markAllRead() {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    setNotifications((p) => p.map((n) => ({ ...n, isRead: true })));
+  }
+
+  async function markOne(id) {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    });
+    setNotifications((p) =>
+      p.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+    );
+  }
+
+  const unread = notifications.filter((n) => !n.isRead).length;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 70,
+        left: 230,
+        width: 320,
+        maxHeight: 420,
+        background: "var(--bg-mid)",
+        border: "1px solid var(--glass-border)",
+        borderRadius: 14,
+        boxShadow: "var(--shadow-card)",
+        zIndex: 200,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          padding: "12px 16px",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Bell size={14} color="var(--accent)" />
+          <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+            Notifications
+          </span>
+          {unread > 0 && (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                padding: "1px 7px",
+                borderRadius: 50,
+                background: "var(--accent)",
+                color: "#fff",
+              }}
+            >
+              {unread}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {unread > 0 && (
+            <button
+              onClick={markAllRead}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--teal)",
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <Check size={11} /> Mark all read
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+      <div style={{ overflowY: "auto", flex: 1 }}>
+        {loading ? (
+          <div
+            style={{
+              padding: "24px",
+              textAlign: "center",
+              color: "var(--muted)",
+              fontSize: "0.8rem",
+            }}
+          >
+            Loading…
+          </div>
+        ) : notifications.length === 0 ? (
+          <div
+            style={{
+              padding: "32px 16px",
+              textAlign: "center",
+              color: "var(--muted)",
+              fontSize: "0.8rem",
+            }}
+          >
+            <Bell size={28} style={{ marginBottom: 8, opacity: 0.2 }} />
+            <div>No notifications yet.</div>
+          </div>
+        ) : (
+          notifications.map((n) => (
+            <div
+              key={n._id}
+              onClick={() => !n.isRead && markOne(n._id)}
+              style={{
+                padding: "11px 16px",
+                borderBottom: "1px solid var(--glass-border)",
+                background: n.isRead ? "transparent" : "rgba(232,98,26,0.04)",
+                cursor: n.isRead ? "default" : "pointer",
+                transition: "background 0.15s",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+              >
+                {!n.isRead && (
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      flexShrink: 0,
+                      marginTop: 5,
+                    }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: n.isRead ? 400 : 600,
+                      marginBottom: 2,
+                      paddingLeft: n.isRead ? 16 : 0,
+                    }}
+                  >
+                    {n.title}
+                  </div>
+                  {n.body && (
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--muted)",
+                        paddingLeft: n.isRead ? 16 : 0,
+                      }}
+                    >
+                      {n.body}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "var(--faint)",
+                      marginTop: 4,
+                      paddingLeft: n.isRead ? 16 : 0,
+                    }}
+                  >
+                    {fmtTime(n.createdAt)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }) {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const houseId = params?.houseId;
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const bellRef = useRef(null);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/");
   }, [isLoaded, isSignedIn, router]);
 
-  if (!isLoaded) {
+  // Poll unread count every 30s
+  useEffect(() => {
+    if (!isSignedIn) return;
+    function fetchCount() {
+      fetch("/api/notifications?limit=1&unreadOnly=true")
+        .then((r) => r.json())
+        .then((j) => {
+          if (j.success) setUnreadCount(j.unreadCount || 0);
+        })
+        .catch(() => {});
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [isSignedIn]);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    if (!showNotifications) return;
+    function handler(e) {
+      if (bellRef.current && !bellRef.current.contains(e.target))
+        setShowNotifications(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showNotifications]);
+
+  if (!isLoaded)
     return (
       <div
         style={{
@@ -62,8 +313,6 @@ export default function DashboardLayout({ children }) {
         </div>
       </div>
     );
-  }
-
   if (!isSignedIn) return null;
 
   return (
@@ -74,7 +323,6 @@ export default function DashboardLayout({ children }) {
         display: "flex",
       }}
     >
-      {/* Toaster — global toast notifications */}
       <Toaster
         position="bottom-right"
         toastOptions={{
@@ -83,10 +331,6 @@ export default function DashboardLayout({ children }) {
             border: "1px solid var(--glass-border)",
             color: "var(--text)",
             fontSize: "0.875rem",
-          },
-          classNames: {
-            success: "toast-success",
-            error: "toast-error",
           },
         }}
       />
@@ -224,28 +468,87 @@ export default function DashboardLayout({ children }) {
           )}
         </nav>
 
+        {/* Bottom bar: notifications + user */}
         <div
           style={{
-            padding: "16px 20px",
+            padding: "12px 14px",
             borderTop: "1px solid var(--glass-border)",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
           }}
+          ref={bellRef}
         >
-          <UserButton afterSignOutUrl="/" />
-          <div
+          {/* Notification bell */}
+          <button
+            onClick={() => {
+              setShowNotifications((v) => !v);
+              if (!showNotifications && unreadCount > 0) setUnreadCount(0);
+            }}
             style={{
-              fontSize: "0.75rem",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              padding: "8px 10px",
+              borderRadius: 10,
+              marginBottom: 10,
+              background: showNotifications
+                ? "var(--glass-bg-mid)"
+                : "transparent",
+              border: "none",
+              cursor: "pointer",
               color: "var(--muted)",
-              overflow: "hidden",
+              transition: "background 0.15s",
             }}
           >
+            <div style={{ position: "relative" }}>
+              <Bell
+                size={16}
+                color={showNotifications ? "var(--accent)" : "var(--muted)"}
+              />
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -5,
+                    right: -6,
+                    minWidth: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    background: "var(--accent)",
+                    color: "#fff",
+                    fontSize: "0.55rem",
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 3px",
+                  }}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+            <span
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: showNotifications ? 600 : 400,
+                color: showNotifications ? "var(--text)" : "var(--muted)",
+              }}
+            >
+              Notifications
+            </span>
+          </button>
+
+          {showNotifications && (
+            <NotificationPanel onClose={() => setShowNotifications(false)} />
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <UserButton afterSignOutUrl="/" />
             <div
               style={{
+                fontSize: "0.8rem",
                 fontWeight: 600,
                 color: "var(--text)",
-                fontSize: "0.8rem",
               }}
             >
               My Account

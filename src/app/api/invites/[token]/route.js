@@ -4,10 +4,9 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import Invite from "@/models/Invite";
 import House from "@/models/House";
-import { Thread } from "@/models/Thread";
-import { INVITE_STATUS } from "@/lib/constants";
+import { INVITE_STATUS, NOTIFICATION_TYPE } from "@/lib/constants";
+import { createNotification } from "@/lib/notifications";
 
-// GET /api/invites/[token] — look up invite details (public, for the landing page)
 export async function GET(req, { params }) {
   await connectDB();
   const { token } = await params;
@@ -22,6 +21,7 @@ export async function GET(req, { params }) {
       { success: false, error: "Invite not found or expired" },
       { status: 404 }
     );
+
   if (invite.expiresAt < new Date()) {
     await Invite.findByIdAndUpdate(invite._id, {
       $set: { status: INVITE_STATUS.EXPIRED },
@@ -32,12 +32,10 @@ export async function GET(req, { params }) {
     );
   }
 
-  // Don't expose token in response body
   const { token: _t, ...safe } = invite;
   return Response.json({ success: true, data: safe });
 }
 
-// POST /api/invites/[token] — accept invite (requires auth)
 export async function POST(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
@@ -73,6 +71,7 @@ export async function POST(req, { params }) {
       { success: false, error: "Invite not found or already used" },
       { status: 404 }
     );
+
   if (invite.expiresAt < new Date()) {
     await Invite.findByIdAndUpdate(invite._id, {
       $set: { status: INVITE_STATUS.EXPIRED },
@@ -83,7 +82,6 @@ export async function POST(req, { params }) {
     );
   }
 
-  // Check not already a member
   const existing = await Membership.findOne({
     userId: user._id,
     houseId: invite.houseId,
@@ -94,7 +92,6 @@ export async function POST(req, { params }) {
       { status: 409 }
     );
 
-  // Create membership
   const membership = await Membership.create({
     userId: user._id,
     houseId: invite.houseId,
@@ -103,7 +100,6 @@ export async function POST(req, { params }) {
     isActive: true,
   });
 
-  // Mark invite accepted
   await Invite.findByIdAndUpdate(invite._id, {
     $set: {
       status: INVITE_STATUS.ACCEPTED,
@@ -111,6 +107,19 @@ export async function POST(req, { params }) {
       acceptedAt: new Date(),
     },
   });
+
+  // Notify the manager who sent the invite
+  const house = await House.findById(invite.houseId).lean();
+  if (house) {
+    await createNotification({
+      userId: invite.invitedBy,
+      houseId: invite.houseId,
+      type: NOTIFICATION_TYPE.MEMBER_JOINED,
+      title: `${user.name} joined ${house.name}`,
+      body: `They accepted your invite as ${invite.role}.`,
+      meta: { membershipId: membership._id },
+    });
+  }
 
   return Response.json({
     success: true,

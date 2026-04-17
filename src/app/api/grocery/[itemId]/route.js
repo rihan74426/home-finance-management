@@ -3,6 +3,7 @@ import connectDB from "@/lib/db/mongoose";
 import User from "@/models/User";
 import Membership from "@/models/Membership";
 import GroceryItem from "@/models/Grocery";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 // GET /api/houses/[id]/grocery — fetch all active items grouped by category
 export async function GET(req, { params }) {
@@ -112,4 +113,114 @@ export async function POST(req, { params }) {
 
   const populated = await item.populate("addedBy", "name avatarUrl");
   return Response.json({ success: true, data: populated }, { status: 201 });
+}
+
+export async function PATCH(req, { params }) {
+  // rate limit: update grocery item
+  const identifier = getRequestIdentifier(req) || (params?.itemId ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId)
+    return Response.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+
+  await connectDB();
+  const { id } = await params;
+
+  const user = await User.findOne({ clerkId, deletedAt: null });
+  if (!user)
+    return Response.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+
+  const membership = await Membership.findOne({
+    userId: user._id,
+    houseId: id,
+    isActive: true,
+  });
+  if (!membership)
+    return Response.json(
+      { success: false, error: "Not a member" },
+      { status: 403 }
+    );
+
+  const { itemId } = params;
+  const item = await GroceryItem.findOne({ _id: itemId, houseId: id });
+  if (!item)
+    return Response.json(
+      { success: false, error: "Item not found" },
+      { status: 404 }
+    );
+
+  const { name, quantity, category, note, isRecurring, isBought } =
+    await req.json();
+
+  if (typeof isBought !== "undefined" && item.isBought !== isBought) {
+    // if purchased status is changed, update boughtBy field
+    item.boughtBy = isBought ? user._id : null;
+  }
+
+  item.name = name?.trim() || item.name;
+  item.quantity = quantity?.trim() || item.quantity;
+  item.category = category || item.category;
+  item.note = note?.trim() || item.note;
+  item.isRecurring = !!isRecurring;
+
+  await item.save();
+
+  const populated = await item.populate("addedBy", "name avatarUrl");
+  return Response.json({ success: true, data: populated });
+}
+
+export async function DELETE(req, { params }) {
+  // rate limit: delete grocery item
+  const identifier = getRequestIdentifier(req) || (params?.itemId ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
+  const { userId: clerkId } = await auth();
+  if (!clerkId)
+    return Response.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+
+  await connectDB();
+  const { id } = await params;
+
+  const user = await User.findOne({ clerkId, deletedAt: null });
+  if (!user)
+    return Response.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+
+  const membership = await Membership.findOne({
+    userId: user._id,
+    houseId: id,
+    isActive: true,
+  });
+  if (!membership)
+    return Response.json(
+      { success: false, error: "Not a member" },
+      { status: 403 }
+    );
+
+  const { itemId } = params;
+  const item = await GroceryItem.findOne({ _id: itemId, houseId: id });
+  if (!item)
+    return Response.json(
+      { success: false, error: "Item not found" },
+      { status: 404 }
+    );
+
+  item.deletedAt = new Date();
+  await item.save();
+
+  return Response.json({ success: true, data: null }, { status: 204 });
 }

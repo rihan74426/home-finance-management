@@ -5,9 +5,15 @@ import Membership from "@/models/Membership";
 import Invite from "@/models/Invite";
 import House from "@/models/House";
 import { ROLES, INVITE_STATUS } from "@/lib/constants";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 // POST /api/houses/[id]/invites — manager creates an invite link
 export async function POST(req, { params }) {
+  // rate limit: create invite (invite-specific)
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "invite");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -88,6 +94,11 @@ export async function POST(req, { params }) {
 
 // GET /api/houses/[id]/invites — list pending invites (manager only)
 export async function GET(req, { params }) {
+  // rate limit: invites read
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "read");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(

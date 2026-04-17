@@ -4,6 +4,7 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import VaultItem from "@/models/VaultItem";
 import { ROLES, VAULT_VISIBILITY } from "@/lib/constants";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 async function getActorAndItem(clerkId, itemId) {
   const user = await User.findOne({ clerkId, deletedAt: null });
@@ -21,6 +22,11 @@ async function getActorAndItem(clerkId, itemId) {
 
 // PATCH /api/vault/[itemId]
 export async function PATCH(req, { params }) {
+  // rate limit: write
+  const identifier = getRequestIdentifier(req) || (params?.itemId ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -64,6 +70,11 @@ export async function PATCH(req, { params }) {
 
 // DELETE /api/vault/[itemId]
 export async function DELETE(req, { params }) {
+  // rate limit: write
+  const identifier = getRequestIdentifier(req) || (params?.itemId ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(

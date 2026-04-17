@@ -3,9 +3,15 @@ import connectDB from "@/lib/db/mongoose";
 import User from "@/models/User";
 import Membership from "@/models/Membership";
 import GroceryItem from "@/models/Grocery";
+import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
 
 // GET /api/houses/[id]/grocery — fetch all active items grouped by category
 export async function GET(req, { params }) {
+  // rate limit: grocery reads
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "read");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(
@@ -51,6 +57,11 @@ export async function GET(req, { params }) {
 
 // POST /api/houses/[id]/grocery — add a new item
 export async function POST(req, { params }) {
+  // rate limit: add grocery item (write)
+  const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
+  const maybeBlocked = limitApi(identifier, "write");
+  if (maybeBlocked) return maybeBlocked;
+
   const { userId: clerkId } = await auth();
   if (!clerkId)
     return Response.json(

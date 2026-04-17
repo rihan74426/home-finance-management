@@ -4,105 +4,88 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
-  BookOpen,
+  ShieldCheck,
   Plus,
   X,
   Loader2,
-  CheckCircle,
-  Clock,
-  AlertCircle,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Wifi,
+  Lock,
+  FileText,
+  Phone,
+  Package,
+  Trash2,
+  Globe,
 } from "lucide-react";
-import { PAYMENT_METHOD } from "@/lib/constants";
-import { LedgerSkeleton } from "@/components/ui/Skeleton";
+import { VAULT_TYPE, VAULT_VISIBILITY } from "@/lib/constants";
+import { VaultSkeleton } from "@/components/ui/Skeleton";
 
-const STATUS_CONFIG = {
-  paid: {
-    label: "Paid",
-    color: "#4ade80",
-    bg: "rgba(74,222,128,0.1)",
-    border: "rgba(74,222,128,0.25)",
-    icon: CheckCircle,
+const TYPE_CONFIG = {
+  wifi: {
+    label: "WiFi",
+    icon: Wifi,
+    color: "#38bdf8",
+    fields: ["SSID", "Password"],
   },
-  partial: {
-    label: "Partial",
+  door_code: {
+    label: "Door Code",
+    icon: Lock,
     color: "#fbbf24",
-    bg: "rgba(251,191,36,0.1)",
-    border: "rgba(251,191,36,0.25)",
-    icon: Clock,
+    fields: ["Code"],
   },
-  pending: {
-    label: "Pending",
+  gate_code: {
+    label: "Gate Code",
+    icon: Lock,
+    color: "#fb923c",
+    fields: ["Code"],
+  },
+  lease: {
+    label: "Lease",
+    icon: FileText,
+    color: "#a78bfa",
+    fields: ["File / Notes"],
+  },
+  contact: {
+    label: "Contact",
+    icon: Phone,
+    color: "#4ade80",
+    fields: ["Phone/Email", "Notes"],
+  },
+  document: {
+    label: "Document",
+    icon: FileText,
+    color: "#94a3b8",
+    fields: ["Value", "Notes"],
+  },
+  appliance: {
+    label: "Appliance",
+    icon: Package,
+    color: "#f472b6",
+    fields: ["Model/Serial", "Notes"],
+  },
+  other: {
+    label: "Other",
+    icon: Globe,
     color: "var(--muted)",
-    bg: "var(--glass-bg)",
-    border: "var(--glass-border)",
-    icon: Clock,
-  },
-  overdue: {
-    label: "Overdue",
-    color: "#f87171",
-    bg: "rgba(248,113,113,0.1)",
-    border: "rgba(248,113,113,0.25)",
-    icon: AlertCircle,
+    fields: ["Value", "Notes"],
   },
 };
 
-const PAYMENT_METHOD_LABELS = {
-  cash: "Cash",
-  bkash: "bKash",
-  nagad: "Nagad",
-  jazz_cash: "JazzCash",
-  easy_paisa: "EasyPaisa",
-  upi: "UPI",
-  bank_transfer: "Bank Transfer",
-  card: "Card",
-  other: "Other",
-};
+const TYPE_ORDER = [
+  "wifi",
+  "door_code",
+  "gate_code",
+  "contact",
+  "lease",
+  "document",
+  "appliance",
+  "other",
+];
 
-function fmtCurrency(amount, currency) {
-  if (amount == null) return "—";
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "BDT",
-      maximumFractionDigits: 0,
-    }).format(amount / 100);
-  } catch {
-    return `${amount / 100}`;
-  }
-}
-
-function fmtDate(d) {
-  return new Date(d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function StatusBadge({ status }) {
-  const c = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-  const Icon = c.icon;
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        fontSize: "0.72rem",
-        fontWeight: 600,
-        padding: "3px 9px",
-        borderRadius: 50,
-        color: c.color,
-        background: c.bg,
-        border: `1px solid ${c.border}`,
-      }}
-    >
-      <Icon size={11} /> {c.label}
-    </span>
-  );
-}
-
-const inputStyle = {
+const iS = {
   width: "100%",
   background: "var(--glass-bg)",
   border: "1px solid var(--glass-border)",
@@ -113,7 +96,7 @@ const inputStyle = {
   outline: "none",
   boxSizing: "border-box",
 };
-const labelStyle = {
+const lS = {
   display: "block",
   fontSize: "0.75rem",
   fontWeight: 600,
@@ -123,111 +106,295 @@ const labelStyle = {
   letterSpacing: "0.05em",
 };
 
-export default function LedgerPage() {
+function CopyBtn({ value }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(value || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+  return (
+    <button
+      onClick={copy}
+      style={{
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        color: copied ? "var(--teal)" : "var(--muted)",
+        padding: 3,
+      }}
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  );
+}
+
+function VaultCard({ item, isManager, onDelete }) {
+  const [revealed, setRevealed] = useState(false);
+  const tc = TYPE_CONFIG[item.type] || TYPE_CONFIG.other;
+  const Icon = tc.icon;
+  const isManagerOnly = item.visibility === VAULT_VISIBILITY.MANAGER_ONLY;
+
+  const fields = [
+    item.primaryValue && { label: tc.fields[0], value: item.primaryValue },
+    item.secondaryValue && {
+      label: tc.fields[1] || "Secondary",
+      value: item.secondaryValue,
+    },
+    item.notes && { label: "Notes", value: item.notes },
+  ].filter(Boolean);
+
+  return (
+    <div
+      style={{
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
+        borderRadius: 13,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          padding: "13px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 9,
+            flexShrink: 0,
+            background: `${tc.color}18`,
+            border: `1px solid ${tc.color}30`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon size={15} color={tc.color} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+              {item.label}
+            </span>
+            {isManagerOnly && (
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  padding: "1px 7px",
+                  borderRadius: 50,
+                  color: "var(--accent)",
+                  background: "var(--accent-dim)",
+                  border: "1px solid var(--accent-border)",
+                }}
+              >
+                Manager only
+              </span>
+            )}
+          </div>
+          <div
+            style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: 2 }}
+          >
+            {tc.label}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {fields.length > 0 && (
+            <button
+              onClick={() => setRevealed((v) => !v)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--muted)",
+                padding: 4,
+              }}
+            >
+              {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          )}
+          {(isManager || item.canDelete) && (
+            <button
+              onClick={() => onDelete(item._id)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--muted)",
+                padding: 4,
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+      {revealed && fields.length > 0 && (
+        <div
+          style={{
+            borderTop: "1px solid var(--glass-border)",
+            padding: "10px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            background: "var(--bg-surface)",
+          }}
+        >
+          {fields.map((f) => (
+            <div key={f.label}>
+              <div
+                style={{
+                  fontSize: "0.67rem",
+                  color: "var(--muted)",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: 3,
+                }}
+              >
+                {f.label}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <code
+                  style={{
+                    flex: 1,
+                    fontSize: "0.85rem",
+                    background: "var(--glass-bg)",
+                    padding: "6px 10px",
+                    borderRadius: 7,
+                    border: "1px solid var(--glass-border)",
+                    wordBreak: "break-all",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                  }}
+                >
+                  {f.value}
+                </code>
+                <CopyBtn value={f.value} />
+              </div>
+            </div>
+          ))}
+          {item.fileUrl && (
+            <a
+              href={item.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--teal)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <FileText size={12} /> {item.fileName || "View file"}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function VaultPage() {
   const { houseId } = useParams();
-  const [entries, setEntries] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [house, setHouse] = useState(null);
+  const [items, setItems] = useState([]);
   const [isManager, setIsManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
   const [form, setForm] = useState({
-    membershipId: "",
-    amountDue: "",
-    amountPaid: "",
-    label: "Rent",
-    paymentMethod: "cash",
-    periodStart: "",
-    periodEnd: "",
-    dueDate: "",
-    memberNote: "",
-    managerNote: "",
+    type: "wifi",
+    label: "",
+    primaryValue: "",
+    secondaryValue: "",
+    notes: "",
+    visibility: "all",
+    fileUrl: "",
+    fileName: "",
   });
+  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    async function load() {
-      const [lRes, mRes, hRes] = await Promise.all([
-        fetch(`/api/houses/${houseId}/ledger`),
-        fetch(`/api/houses/${houseId}/members`),
-        fetch(`/api/houses/${houseId}`),
-      ]);
-      const [lJson, mJson, hJson] = await Promise.all([
-        lRes.json(),
-        mRes.json(),
-        hRes.json(),
-      ]);
-      if (lJson.success) {
-        setEntries(lJson.data);
-        setIsManager(lJson.isManager);
-      }
-      if (mJson.success) setMembers(mJson.data);
-      if (hJson.success) setHouse(hJson.data);
-      setLoading(false);
-    }
-    load();
+    fetch(`/api/houses/${houseId}/vault`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) {
+          setItems(j.data);
+          setIsManager(j.isManager);
+        }
+      })
+      .finally(() => setLoading(false));
   }, [houseId]);
 
-  function setF(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
-  }
-
-  async function handleSubmit(e) {
+  async function handleCreate(e) {
     e.preventDefault();
-    if (
-      !form.membershipId ||
-      !form.amountDue ||
-      !form.periodStart ||
-      !form.periodEnd ||
-      !form.dueDate
-    ) {
-      toast.error("Please fill in all required fields.");
+    if (!form.label.trim()) {
+      toast.error("Label is required.");
       return;
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/houses/${houseId}/ledger`, {
+      const res = await fetch(`/api/houses/${houseId}/vault`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          amountDue: Math.round(parseFloat(form.amountDue) * 100),
-          amountPaid: Math.round(parseFloat(form.amountPaid || 0) * 100),
-        }),
+        body: JSON.stringify(form),
       });
       const json = await res.json();
       if (!json.success) {
         toast.error(json.error);
         return;
       }
-      setEntries((p) => [json.data, ...p]);
+      setItems((p) => [json.data, ...p]);
       setShowForm(false);
       setForm({
-        membershipId: "",
-        amountDue: "",
-        amountPaid: "",
-        label: "Rent",
-        paymentMethod: "cash",
-        periodStart: "",
-        periodEnd: "",
-        dueDate: "",
-        memberNote: "",
-        managerNote: "",
+        type: "wifi",
+        label: "",
+        primaryValue: "",
+        secondaryValue: "",
+        notes: "",
+        visibility: "all",
+        fileUrl: "",
+        fileName: "",
       });
-      toast.success("Payment logged successfully.");
+      toast.success("Vault item added.");
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error("Network error.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <LedgerSkeleton />;
+  async function handleDelete(id) {
+    if (!confirm("Delete this vault item?")) return;
+    setItems((p) => p.filter((i) => i._id !== id));
+    const res = await fetch(`/api/vault/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to delete.");
+    } else toast.success("Item deleted.");
+  }
 
-  const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
-  const totalPaid = entries.reduce((s, e) => s + (e.amountPaid || 0), 0);
-  const overdueCount = entries.filter((e) => e.status === "overdue").length;
+  // Group by type
+  const grouped = TYPE_ORDER.reduce((acc, type) => {
+    const group = items.filter((i) => i.type === type);
+    if (group.length > 0) acc[type] = group;
+    return acc;
+  }, {});
+
+  const tc_form = TYPE_CONFIG[form.type] || TYPE_CONFIG.other;
+
+  if (loading) return <VaultSkeleton />;
 
   return (
     <div>
@@ -248,7 +415,7 @@ export default function LedgerPage() {
               marginBottom: 4,
             }}
           >
-            <BookOpen size={20} color="var(--accent)" />
+            <ShieldCheck size={20} color="var(--accent)" />
             <h1
               style={{
                 fontSize: "1.4rem",
@@ -256,92 +423,35 @@ export default function LedgerPage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Rent Ledger
+              The Vault
             </h1>
           </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-            {house?.name} · {house?.currency}
+            {items.length} item{items.length !== 1 ? "s" : ""} · AES-256
+            encrypted
           </p>
         </div>
-        {isManager && (
-          <button
-            onClick={() => setShowForm(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "9px 18px",
-              borderRadius: 50,
-              background: "var(--accent)",
-              color: "#fff",
-              fontWeight: 600,
-              fontSize: "0.825rem",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <Plus size={14} /> Log payment
-          </button>
-        )}
-      </div>
-
-      {isManager && (
-        <div
+        <button
+          onClick={() => setShowForm(true)}
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: 12,
-            marginBottom: 24,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 18px",
+            borderRadius: 50,
+            background: "var(--accent)",
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: "0.825rem",
+            border: "none",
+            cursor: "pointer",
           }}
         >
-          {[
-            {
-              label: "Total Due",
-              value: fmtCurrency(totalDue, house?.currency),
-              color: "var(--text)",
-            },
-            {
-              label: "Total Collected",
-              value: fmtCurrency(totalPaid, house?.currency),
-              color: "#4ade80",
-            },
-            {
-              label: "Overdue",
-              value: overdueCount,
-              color: overdueCount > 0 ? "#f87171" : "var(--muted)",
-            },
-          ].map((s) => (
-            <div
-              key={s.label}
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 12,
-                padding: "16px 18px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--muted)",
-                  marginBottom: 6,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {s.label}
-              </div>
-              <div
-                style={{ fontSize: "1.3rem", fontWeight: 800, color: s.color }}
-              >
-                {s.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+          <Plus size={14} /> Add item
+        </button>
+      </div>
 
-      {/* Modal */}
+      {/* Add item modal */}
       {showForm && (
         <div
           style={{
@@ -362,7 +472,7 @@ export default function LedgerPage() {
               borderRadius: 16,
               padding: 28,
               width: "100%",
-              maxWidth: 480,
+              maxWidth: 440,
               maxHeight: "90vh",
               overflowY: "auto",
             }}
@@ -375,8 +485,8 @@ export default function LedgerPage() {
                 marginBottom: 20,
               }}
             >
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800 }}>
-                Log Payment
+              <h2 style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+                Add Vault Item
               </h2>
               <button
                 onClick={() => setShowForm(false)}
@@ -391,177 +501,145 @@ export default function LedgerPage() {
               </button>
             </div>
             <form
-              onSubmit={handleSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              onSubmit={handleCreate}
+              style={{ display: "flex", flexDirection: "column", gap: 13 }}
             >
+              {/* Type selector */}
               <div>
-                <label style={labelStyle}>Member *</label>
-                <select
-                  style={{ ...inputStyle, cursor: "pointer" }}
-                  value={form.membershipId}
-                  onChange={(e) => setF("membershipId", e.target.value)}
+                <label style={lS}>Type</label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: 5,
+                  }}
                 >
-                  <option value="">Select member…</option>
-                  {members.map((m) => (
-                    <option key={m.membershipId} value={m.membershipId}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>
-                    Amount Due ({house?.currency}) *
-                  </label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="e.g. 8000"
-                    value={form.amountDue}
-                    onChange={(e) => setF("amountDue", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Amount Paid</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={form.amountPaid}
-                    onChange={(e) => setF("amountPaid", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>Period Start *</label>
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.periodStart}
-                    onChange={(e) => setF("periodStart", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Period End *</label>
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.periodEnd}
-                    onChange={(e) => setF("periodEnd", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>Due Date *</label>
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.dueDate}
-                    onChange={(e) => setF("dueDate", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Payment Method</label>
-                  <select
-                    style={{ ...inputStyle, cursor: "pointer" }}
-                    value={form.paymentMethod}
-                    onChange={(e) => setF("paymentMethod", e.target.value)}
-                  >
-                    {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
+                  {TYPE_ORDER.map((t) => {
+                    const c = TYPE_CONFIG[t];
+                    const TIcon = c.icon;
+                    const on = form.type === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setF("type", t)}
+                        style={{
+                          padding: "8px 4px",
+                          borderRadius: 8,
+                          flexDirection: "column",
+                          border: on
+                            ? "1.5px solid var(--accent)"
+                            : "1px solid var(--glass-border)",
+                          background: on
+                            ? "var(--accent-dim)"
+                            : "var(--glass-bg)",
+                          color: on ? "var(--text)" : "var(--muted)",
+                          fontSize: "0.65rem",
+                          fontWeight: on ? 600 : 400,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <TIcon
+                          size={13}
+                          color={on ? c.color : "var(--muted)"}
+                        />
+                        {c.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Label</label>
+                <label style={lS}>Label *</label>
                 <input
-                  style={inputStyle}
-                  placeholder="e.g. Rent — April 2025"
+                  style={iS}
+                  placeholder={`e.g. Home ${tc_form.label}`}
                   value={form.label}
                   onChange={(e) => setF("label", e.target.value)}
+                  maxLength={100}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Note for member</label>
+                <label style={lS}>{tc_form.fields[0]}</label>
                 <input
-                  style={inputStyle}
-                  placeholder="Visible to the member"
-                  value={form.memberNote}
-                  onChange={(e) => setF("memberNote", e.target.value)}
+                  style={iS}
+                  placeholder={tc_form.fields[0]}
+                  value={form.primaryValue}
+                  onChange={(e) => setF("primaryValue", e.target.value)}
                 />
               </div>
+              {tc_form.fields[1] && (
+                <div>
+                  <label style={lS}>{tc_form.fields[1]}</label>
+                  <input
+                    style={iS}
+                    placeholder={tc_form.fields[1]}
+                    value={form.secondaryValue}
+                    onChange={(e) => setF("secondaryValue", e.target.value)}
+                  />
+                </div>
+              )}
               <div>
-                <label style={labelStyle}>Private note (manager only)</label>
+                <label style={lS}>Notes</label>
                 <input
-                  style={inputStyle}
-                  placeholder="Only you can see this"
-                  value={form.managerNote}
-                  onChange={(e) => setF("managerNote", e.target.value)}
+                  style={iS}
+                  placeholder="Optional notes"
+                  value={form.notes}
+                  onChange={(e) => setF("notes", e.target.value)}
                 />
               </div>
+              {isManager && (
+                <div>
+                  <label style={lS}>Visibility</label>
+                  <select
+                    style={{ ...iS, cursor: "pointer" }}
+                    value={form.visibility}
+                    onChange={(e) => setF("visibility", e.target.value)}
+                  >
+                    <option value="all">All members</option>
+                    <option value="manager_only">Manager only</option>
+                  </select>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={submitting}
                 style={{
                   padding: "11px",
                   borderRadius: 10,
+                  marginTop: 4,
                   background: submitting
                     ? "var(--glass-bg-mid)"
                     : "var(--accent)",
                   color: submitting ? "var(--muted)" : "#fff",
                   fontWeight: 700,
-                  fontSize: "0.9rem",
+                  fontSize: "0.875rem",
                   border: "none",
                   cursor: submitting ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  marginTop: 4,
                 }}
               >
                 {submitting && (
                   <Loader2
-                    size={15}
+                    size={14}
                     style={{ animation: "spin 1s linear infinite" }}
                   />
                 )}
-                {submitting ? "Saving…" : "Save entry"}
+                {submitting ? "Saving…" : "Save to vault"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {entries.length === 0 ? (
+      {/* Grouped vault items */}
+      {items.length === 0 ? (
         <div
           style={{
             textAlign: "center",
@@ -569,114 +647,55 @@ export default function LedgerPage() {
             color: "var(--muted)",
           }}
         >
-          <BookOpen size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p>
-            {isManager
-              ? "No entries yet. Log the first payment."
-              : "No payment records yet."}
+          <ShieldCheck size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <p>Nothing in the vault yet.</p>
+          <p style={{ fontSize: "0.82rem", marginTop: 4 }}>
+            Add WiFi passwords, door codes, and important documents.
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {entries.map((e) => (
-            <div
-              key={e._id}
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 12,
-                padding: "14px 18px",
-              }}
-            >
+        Object.entries(grouped).map(([type, group]) => {
+          const tc = TYPE_CONFIG[type] || TYPE_CONFIG.other;
+          const Icon = tc.icon;
+          return (
+            <div key={type} style={{ marginBottom: 28 }}>
               <div
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: 12,
+                  alignItems: "center",
+                  gap: 7,
+                  marginBottom: 10,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 4,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                      {e.label || "Rent"}
-                    </span>
-                    <StatusBadge status={e.status} />
-                    {e.paymentMethod && (
-                      <span
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--muted)",
-                          background: "var(--glass-bg-mid)",
-                          padding: "2px 7px",
-                          borderRadius: 50,
-                        }}
-                      >
-                        {PAYMENT_METHOD_LABELS[e.paymentMethod] ||
-                          e.paymentMethod}
-                      </span>
-                    )}
-                  </div>
-                  {isManager && e.membershipId?.userId && (
-                    <div
-                      style={{
-                        fontSize: "0.78rem",
-                        color: "var(--teal)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      {e.membershipId.userId.name}
-                    </div>
-                  )}
-                  <div style={{ fontSize: "0.775rem", color: "var(--muted)" }}>
-                    {fmtDate(e.periodStart)} – {fmtDate(e.periodEnd)} · Due{" "}
-                    {fmtDate(e.dueDate)}
-                  </div>
-                  {e.memberNote && (
-                    <div
-                      style={{
-                        fontSize: "0.775rem",
-                        color: "var(--muted)",
-                        marginTop: 4,
-                      }}
-                    >
-                      "{e.memberNote}"
-                    </div>
-                  )}
-                  {isManager && e.managerNote && (
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--accent)",
-                        marginTop: 3,
-                      }}
-                    >
-                      {e.managerNote}
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-                    {fmtCurrency(e.amountPaid, house?.currency)}
-                  </div>
-                  {e.amountPaid !== e.amountDue && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
-                      of {fmtCurrency(e.amountDue, house?.currency)}
-                    </div>
-                  )}
-                </div>
+                <Icon size={13} color={tc.color} />
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  {tc.label}
+                </span>
+                <span style={{ fontSize: "0.68rem", color: "var(--faint)" }}>
+                  ({group.length})
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {group.map((item) => (
+                  <VaultCard
+                    key={item._id}
+                    item={item}
+                    isManager={isManager}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })
       )}
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
