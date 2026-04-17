@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   ShoppingCart,
   Plus,
@@ -12,6 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+
+const GROCERY_POLL_INTERVAL = 5000; // 5s — less aggressive than chat
 
 const CATEGORIES = [
   { value: "all", label: "All" },
@@ -109,23 +112,56 @@ export default function GroceryPage() {
   });
   const [error, setError] = useState(null);
   const nameRef = useRef(null);
+  const pollRef = useRef(null);
+  // Track IDs currently being optimistically updated so polling doesn't stomp them
+  const pendingIds = useRef(new Set());
+
   const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  async function load(bought = showBought) {
-    try {
-      const res = await fetch(
-        `/api/houses/${houseId}/grocery?showBought=${bought}`
-      );
-      const json = await res.json();
-      if (json.success) setItems(json.data);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const fetchItems = useCallback(
+    async (showBoughtFlag = false, silent = false) => {
+      try {
+        const res = await fetch(
+          `/api/houses/${houseId}/grocery?showBought=${showBoughtFlag}`
+        );
+        const json = await res.json();
+        if (json.success) {
+          setItems((prev) => {
+            // Don't overwrite items currently being toggled (optimistic updates)
+            if (pendingIds.current.size === 0) return json.data;
+            // Merge: keep optimistic state for pending items
+            const byId = Object.fromEntries(json.data.map((i) => [i._id, i]));
+            return prev
+              .map((item) =>
+                pendingIds.current.has(item._id) ? item : byId[item._id] || item
+              )
+              .concat(
+                json.data.filter((i) => !prev.find((p) => p._id === i._id))
+              );
+          });
+        }
+      } catch {
+        // silent polling failure — don't toast
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [houseId]
+  );
 
+  // Initial load
   useEffect(() => {
-    load();
-  }, [houseId]);
+    fetchItems(false, false);
+  }, [fetchItems]);
+
+  // Real-time polling
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      fetchItems(showBought, true);
+    }, GROCERY_POLL_INTERVAL);
+    return () => clearInterval(pollRef.current);
+  }, [fetchItems, showBought]);
+
   useEffect(() => {
     if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
   }, [showForm]);
@@ -152,6 +188,7 @@ export default function GroceryPage() {
       setItems((p) => [json.data, ...p]);
       setForm({ name: "", quantity: "", category: "other", note: "" });
       nameRef.current?.focus();
+      toast.success("Item added.");
     } catch {
       setError("Network error.");
     } finally {
@@ -161,39 +198,45 @@ export default function GroceryPage() {
 
   async function toggleBought(item) {
     const next = !item.isBought;
+    pendingIds.current.add(item._id);
     setToggling((p) => ({ ...p, [item._id]: true }));
     setItems((p) =>
       p.map((i) => (i._id === item._id ? { ...i, isBought: next } : i))
     );
     try {
-      await fetch(`/api/grocery/${item._id}`, {
+      const res = await fetch(`/api/grocery/${item._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isBought: next }),
       });
+      if (!res.ok) throw new Error();
     } catch {
       setItems((p) =>
         p.map((i) =>
           i._id === item._id ? { ...i, isBought: item.isBought } : i
         )
       );
+      toast.error("Failed to update item.");
     } finally {
       setToggling((p) => ({ ...p, [item._id]: false }));
+      pendingIds.current.delete(item._id);
     }
   }
 
   async function handleDelete(id) {
     setItems((p) => p.filter((i) => i._id !== id));
-    await fetch(`/api/grocery/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/grocery/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to delete item.");
+      fetchItems(showBought, true);
+    }
   }
 
   async function handleToggleShowBought() {
     const next = !showBought;
     setShowBought(next);
-    if (next) {
-      setLoading(true);
-      await load(true);
-    }
+    setLoading(true);
+    await fetchItems(next, false);
   }
 
   const active = items.filter((i) => !i.isBought);
@@ -432,7 +475,6 @@ export default function GroceryPage() {
         </div>
       ) : (
         <>
-          {/* Active items */}
           {applyFilter(active).length > 0 && (
             <div
               style={{
@@ -454,7 +496,6 @@ export default function GroceryPage() {
             </div>
           )}
 
-          {/* Bought section toggle */}
           {bought.length > 0 && (
             <div>
               <button
@@ -505,10 +546,7 @@ export default function GroceryPage() {
         </>
       )}
 
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        select option { background: #0e1520; color: #f0ede8; }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } select option { background: #0e1520; color: #f0ede8; }`}</style>
     </div>
   );
 }
@@ -528,7 +566,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         gap: 11,
       }}
     >
-      {/* Checkbox */}
       <button
         onClick={onToggle}
         disabled={toggling}
@@ -558,8 +595,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           <Check size={12} color="#4ade80" strokeWidth={3} />
         ) : null}
       </button>
-
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -622,8 +657,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           </div>
         )}
       </div>
-
-      {/* Added-by initial */}
       {!done && item.addedBy?.name && (
         <div
           style={{
@@ -644,7 +677,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           {item.addedBy.name[0].toUpperCase()}
         </div>
       )}
-
       <button
         onClick={onDelete}
         style={{
