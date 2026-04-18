@@ -22,6 +22,7 @@ import {
   Bell,
   X,
   Check,
+  User,
 } from "lucide-react";
 
 const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
@@ -196,7 +197,6 @@ function NotificationPanel({ onClose }) {
                 borderBottom: "1px solid var(--glass-border)",
                 background: n.isRead ? "transparent" : "rgba(232,98,26,0.04)",
                 cursor: n.isRead ? "default" : "pointer",
-                transition: "background 0.15s",
               }}
             >
               <div
@@ -257,7 +257,7 @@ function NotificationPanel({ onClose }) {
 }
 
 export default function DashboardLayout({ children }) {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -270,7 +270,6 @@ export default function DashboardLayout({ children }) {
     if (isLoaded && !isSignedIn) router.replace("/");
   }, [isLoaded, isSignedIn, router]);
 
-  // Poll unread count every 30s
   useEffect(() => {
     if (!isSignedIn) return;
     function fetchCount() {
@@ -286,7 +285,6 @@ export default function DashboardLayout({ children }) {
     return () => clearInterval(interval);
   }, [isSignedIn]);
 
-  // Close notification panel on outside click
   useEffect(() => {
     if (!showNotifications) return;
     function handler(e) {
@@ -314,6 +312,8 @@ export default function DashboardLayout({ children }) {
       </div>
     );
   if (!isSignedIn) return null;
+
+  const isProfileActive = pathname === "/dashboard/profile";
 
   return (
     <div
@@ -437,38 +437,42 @@ export default function DashboardLayout({ children }) {
               })}
             </>
           ) : (
-            TOP_NAV.map(({ href, icon: Icon, label }) => {
-              const active = pathname === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 12px",
-                    borderRadius: 10,
-                    marginBottom: 2,
-                    fontSize: "0.875rem",
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "var(--text)" : "var(--muted)",
-                    background: active ? "var(--glass-bg-mid)" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Icon
-                    size={16}
-                    color={active ? "var(--accent)" : "var(--muted)"}
-                  />
-                  {label}
-                </Link>
-              );
-            })
+            <>
+              {TOP_NAV.map(({ href, icon: Icon, label }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 12px",
+                      borderRadius: 10,
+                      marginBottom: 2,
+                      fontSize: "0.875rem",
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "var(--text)" : "var(--muted)",
+                      background: active
+                        ? "var(--glass-bg-mid)"
+                        : "transparent",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <Icon
+                      size={16}
+                      color={active ? "var(--accent)" : "var(--muted)"}
+                    />
+                    {label}
+                  </Link>
+                );
+              })}
+            </>
           )}
         </nav>
 
-        {/* Bottom bar: notifications + user */}
+        {/* Bottom bar */}
         <div
           style={{
             padding: "12px 14px",
@@ -489,7 +493,7 @@ export default function DashboardLayout({ children }) {
               gap: 9,
               padding: "8px 10px",
               borderRadius: 10,
-              marginBottom: 10,
+              marginBottom: 6,
               background: showNotifications
                 ? "var(--glass-bg-mid)"
                 : "transparent",
@@ -538,6 +542,41 @@ export default function DashboardLayout({ children }) {
             </span>
           </button>
 
+          {/* Profile link */}
+          <Link
+            href="/dashboard/profile"
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              padding: "8px 10px",
+              borderRadius: 10,
+              marginBottom: 10,
+              background: isProfileActive
+                ? "var(--glass-bg-mid)"
+                : "transparent",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "none",
+              transition: "background 0.15s",
+            }}
+          >
+            <User
+              size={16}
+              color={isProfileActive ? "var(--accent)" : "var(--muted)"}
+            />
+            <span
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: isProfileActive ? 600 : 400,
+                color: isProfileActive ? "var(--text)" : "var(--muted)",
+              }}
+            >
+              My Profile
+            </span>
+          </Link>
+
           {showNotifications && (
             <NotificationPanel onClose={() => setShowNotifications(false)} />
           )}
@@ -549,9 +588,12 @@ export default function DashboardLayout({ children }) {
                 fontSize: "0.8rem",
                 fontWeight: 600,
                 color: "var(--text)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              My Account
+              {user?.firstName || "My Account"}
             </div>
           </div>
         </div>
