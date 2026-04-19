@@ -22,10 +22,14 @@ import {
   Bell,
   X,
   Check,
-  User,
+  Video,
+  BookMarked,
+  StickyNote,
+  LogOut,
 } from "lucide-react";
 
 const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
+
 const HOUSE_NAV = [
   { href: "", icon: LayoutDashboard, label: "Overview" },
   { href: "/ledger", icon: BookOpen, label: "Ledger" },
@@ -34,7 +38,11 @@ const HOUSE_NAV = [
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
   { href: "/chat", icon: MessageSquare, label: "Chat" },
+  { href: "/meetings", icon: Video, label: "Meetings" },
+  { href: "/rules", icon: BookMarked, label: "Rules" },
+  { href: "/notes", icon: StickyNote, label: "Notes" },
   { href: "/members", icon: Users, label: "Members" },
+  { href: "/moveout", icon: LogOut, label: "Move-Out" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -197,6 +205,7 @@ function NotificationPanel({ onClose }) {
                 borderBottom: "1px solid var(--glass-border)",
                 background: n.isRead ? "transparent" : "rgba(232,98,26,0.04)",
                 cursor: n.isRead ? "default" : "pointer",
+                transition: "background 0.15s",
               }}
             >
               <div
@@ -257,7 +266,7 @@ function NotificationPanel({ onClose }) {
 }
 
 export default function DashboardLayout({ children }) {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -312,8 +321,6 @@ export default function DashboardLayout({ children }) {
       </div>
     );
   if (!isSignedIn) return null;
-
-  const isProfileActive = pathname === "/dashboard/profile";
 
   return (
     <div
@@ -414,10 +421,10 @@ export default function DashboardLayout({ children }) {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "9px 12px",
+                      padding: "8px 12px",
                       borderRadius: 10,
-                      marginBottom: 2,
-                      fontSize: "0.875rem",
+                      marginBottom: 1,
+                      fontSize: "0.855rem",
                       fontWeight: active ? 600 : 400,
                       color: active ? "var(--text)" : "var(--muted)",
                       background: active
@@ -428,7 +435,7 @@ export default function DashboardLayout({ children }) {
                     }}
                   >
                     <Icon
-                      size={16}
+                      size={15}
                       color={active ? "var(--accent)" : "var(--muted)"}
                     />
                     {label}
@@ -437,42 +444,38 @@ export default function DashboardLayout({ children }) {
               })}
             </>
           ) : (
-            <>
-              {TOP_NAV.map(({ href, icon: Icon, label }) => {
-                const active = pathname === href;
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "9px 12px",
-                      borderRadius: 10,
-                      marginBottom: 2,
-                      fontSize: "0.875rem",
-                      fontWeight: active ? 600 : 400,
-                      color: active ? "var(--text)" : "var(--muted)",
-                      background: active
-                        ? "var(--glass-bg-mid)"
-                        : "transparent",
-                      textDecoration: "none",
-                    }}
-                  >
-                    <Icon
-                      size={16}
-                      color={active ? "var(--accent)" : "var(--muted)"}
-                    />
-                    {label}
-                  </Link>
-                );
-              })}
-            </>
+            TOP_NAV.map(({ href, icon: Icon, label }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    borderRadius: 10,
+                    marginBottom: 2,
+                    fontSize: "0.875rem",
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "var(--text)" : "var(--muted)",
+                    background: active ? "var(--glass-bg-mid)" : "transparent",
+                    textDecoration: "none",
+                  }}
+                >
+                  <Icon
+                    size={16}
+                    color={active ? "var(--accent)" : "var(--muted)"}
+                  />
+                  {label}
+                </Link>
+              );
+            })
           )}
         </nav>
 
-        {/* Bottom bar */}
+        {/* Bottom: notifications + user */}
         <div
           style={{
             padding: "12px 14px",
@@ -480,7 +483,6 @@ export default function DashboardLayout({ children }) {
           }}
           ref={bellRef}
         >
-          {/* Notification bell */}
           <button
             onClick={() => {
               setShowNotifications((v) => !v);
@@ -493,13 +495,12 @@ export default function DashboardLayout({ children }) {
               gap: 9,
               padding: "8px 10px",
               borderRadius: 10,
-              marginBottom: 6,
+              marginBottom: 10,
               background: showNotifications
                 ? "var(--glass-bg-mid)"
                 : "transparent",
               border: "none",
               cursor: "pointer",
-              color: "var(--muted)",
               transition: "background 0.15s",
             }}
           >
@@ -542,41 +543,6 @@ export default function DashboardLayout({ children }) {
             </span>
           </button>
 
-          {/* Profile link */}
-          <Link
-            href="/dashboard/profile"
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "8px 10px",
-              borderRadius: 10,
-              marginBottom: 10,
-              background: isProfileActive
-                ? "var(--glass-bg-mid)"
-                : "transparent",
-              border: "none",
-              cursor: "pointer",
-              textDecoration: "none",
-              transition: "background 0.15s",
-            }}
-          >
-            <User
-              size={16}
-              color={isProfileActive ? "var(--accent)" : "var(--muted)"}
-            />
-            <span
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: isProfileActive ? 600 : 400,
-                color: isProfileActive ? "var(--text)" : "var(--muted)",
-              }}
-            >
-              My Profile
-            </span>
-          </Link>
-
           {showNotifications && (
             <NotificationPanel onClose={() => setShowNotifications(false)} />
           )}
@@ -588,12 +554,9 @@ export default function DashboardLayout({ children }) {
                 fontSize: "0.8rem",
                 fontWeight: 600,
                 color: "var(--text)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
-              {user?.firstName || "My Account"}
+              My Account
             </div>
           </div>
         </div>
