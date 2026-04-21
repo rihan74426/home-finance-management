@@ -13,6 +13,7 @@ import {
   BarChart2,
   CheckCircle,
   Clock,
+  ChevronLeft,
 } from "lucide-react";
 
 const POLL_INTERVAL = 3000;
@@ -63,7 +64,7 @@ function PollCard({ poll, onVote }) {
         borderRadius: 12,
         padding: "14px 16px",
         marginTop: 8,
-        maxWidth: 360,
+        maxWidth: 340,
       }}
     >
       <div
@@ -77,26 +78,13 @@ function PollCard({ poll, onVote }) {
         <BarChart2 size={13} color="var(--accent)" />
         <span
           style={{
-            fontSize: "0.78rem",
+            fontSize: "0.75rem",
             fontWeight: 700,
             color: "var(--accent)",
           }}
         >
           {isClosed ? "Poll closed" : "Poll"}
         </span>
-        {poll.isAnonymous && (
-          <span
-            style={{
-              fontSize: "0.68rem",
-              color: "var(--muted)",
-              background: "var(--glass-bg-mid)",
-              padding: "1px 7px",
-              borderRadius: 50,
-            }}
-          >
-            Anonymous
-          </span>
-        )}
       </div>
       <div style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: 10 }}>
         {poll.question}
@@ -183,30 +171,8 @@ function PollCard({ poll, onVote }) {
           );
         })}
       </div>
-      <div
-        style={{
-          marginTop: 8,
-          fontSize: "0.7rem",
-          color: "var(--muted)",
-          display: "flex",
-          gap: 10,
-        }}
-      >
-        <span>
-          {poll.totalVotes} vote{poll.totalVotes !== 1 ? "s" : ""}
-        </span>
-        {poll.deadline && !isClosed && (
-          <span
-            style={{ display: "inline-flex", alignItems: "center", gap: 3 }}
-          >
-            <Clock size={10} />
-            Ends{" "}
-            {new Date(poll.deadline).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        )}
+      <div style={{ marginTop: 8, fontSize: "0.7rem", color: "var(--muted)" }}>
+        {poll.totalVotes} vote{poll.totalVotes !== 1 ? "s" : ""}
       </div>
     </div>
   );
@@ -221,12 +187,6 @@ function CreatePollModal({ onClose, onCreated, houseId }) {
 
   function updateOption(i, val) {
     setOptions((p) => p.map((o, idx) => (idx === i ? val : o)));
-  }
-  function addOption() {
-    if (options.length < 6) setOptions((p) => [...p, ""]);
-  }
-  function removeOption(i) {
-    if (options.length > 2) setOptions((p) => p.filter((_, idx) => idx !== i));
   }
 
   async function handleSubmit(e) {
@@ -266,6 +226,18 @@ function CreatePollModal({ onClose, onCreated, houseId }) {
     }
   }
 
+  const iS = {
+    width: "100%",
+    background: "var(--glass-bg)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: 9,
+    padding: "9px 12px",
+    color: "var(--text)",
+    fontSize: "0.875rem",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
   return (
     <div
       style={{
@@ -274,19 +246,19 @@ function CreatePollModal({ onClose, onCreated, houseId }) {
         background: "rgba(0,0,0,0.7)",
         zIndex: 200,
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-end",
         justifyContent: "center",
-        padding: 20,
+        padding: "0",
       }}
     >
       <div
         style={{
           background: "var(--bg-mid)",
           border: "1px solid var(--glass-border)",
-          borderRadius: 16,
+          borderRadius: "16px 16px 0 0",
           padding: 24,
           width: "100%",
-          maxWidth: 400,
+          maxWidth: 480,
           maxHeight: "90vh",
           overflowY: "auto",
         }}
@@ -319,154 +291,83 @@ function CreatePollModal({ onClose, onCreated, houseId }) {
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 13 }}
         >
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.72rem",
-                fontWeight: 600,
-                color: "var(--muted)",
-                marginBottom: 5,
-                textTransform: "uppercase",
-              }}
-            >
-              Question *
-            </label>
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="e.g. Should we get a new AC?"
-              maxLength={300}
-              style={{
-                width: "100%",
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 9,
-                padding: "9px 12px",
-                color: "var(--text)",
-                fontSize: "0.875rem",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.72rem",
-                fontWeight: 600,
-                color: "var(--muted)",
-                marginBottom: 5,
-                textTransform: "uppercase",
-              }}
-            >
-              Options *
-            </label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {options.map((opt, i) => (
-                <div key={i} style={{ display: "flex", gap: 6 }}>
-                  <input
-                    value={opt}
-                    onChange={(e) => updateOption(i, e.target.value)}
-                    placeholder={`Option ${i + 1}`}
-                    maxLength={100}
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="e.g. Should we get a new AC?"
+            maxLength={300}
+            style={iS}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {options.map((opt, i) => (
+              <div key={i} style={{ display: "flex", gap: 6 }}>
+                <input
+                  value={opt}
+                  onChange={(e) => updateOption(i, e.target.value)}
+                  placeholder={`Option ${i + 1}`}
+                  maxLength={100}
+                  style={{ ...iS, flex: 1 }}
+                />
+                {options.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOptions((p) => p.filter((_, idx) => idx !== i))
+                    }
                     style={{
-                      flex: 1,
-                      background: "var(--glass-bg)",
-                      border: "1px solid var(--glass-border)",
-                      borderRadius: 9,
-                      padding: "8px 12px",
-                      color: "var(--text)",
-                      fontSize: "0.85rem",
-                      outline: "none",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--muted)",
+                      padding: "0 4px",
                     }}
-                  />
-                  {options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOption(i)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--muted)",
-                        padding: "0 4px",
-                      }}
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {options.length < 6 && (
-                <button
-                  type="button"
-                  onClick={addOption}
-                  style={{
-                    background: "none",
-                    border: "1px dashed var(--glass-border)",
-                    borderRadius: 9,
-                    padding: "7px",
-                    color: "var(--muted)",
-                    cursor: "pointer",
-                    fontSize: "0.78rem",
-                  }}
-                >
-                  + Add option
-                </button>
-              )}
-            </div>
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {options.length < 6 && (
+              <button
+                type="button"
+                onClick={() => setOptions((p) => [...p, ""])}
+                style={{
+                  background: "none",
+                  border: "1px dashed var(--glass-border)",
+                  borderRadius: 9,
+                  padding: "7px",
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                  fontSize: "0.78rem",
+                }}
+              >
+                + Add option
+              </button>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                cursor: "pointer",
-                fontSize: "0.82rem",
-                color: "var(--muted)",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-              />
-              Anonymous
-            </label>
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "0.72rem",
-                fontWeight: 600,
-                color: "var(--muted)",
-                marginBottom: 5,
-                textTransform: "uppercase",
-              }}
-            >
-              Deadline (optional)
-            </label>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontSize: "0.82rem",
+              color: "var(--muted)",
+            }}
+          >
             <input
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              style={{
-                width: "100%",
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 9,
-                padding: "8px 12px",
-                color: "var(--text)",
-                fontSize: "0.85rem",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+            />{" "}
+            Anonymous
+          </label>
+          <input
+            type="datetime-local"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            style={iS}
+          />
           <button
             type="submit"
             disabled={submitting}
@@ -479,18 +380,8 @@ function CreatePollModal({ onClose, onCreated, houseId }) {
               fontSize: "0.875rem",
               border: "none",
               cursor: submitting ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 7,
             }}
           >
-            {submitting && (
-              <Loader2
-                size={13}
-                style={{ animation: "spin 1s linear infinite" }}
-              />
-            )}
             {submitting ? "Creating…" : "Create Poll"}
           </button>
         </form>
@@ -513,12 +404,16 @@ export default function ChatPage() {
   const [showNewPoll, setShowNewPoll] = useState(false);
   const [newThreadName, setNewThreadName] = useState("");
   const [creatingThread, setCreatingThread] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true); // desktop default open
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const pollRef = useRef(null);
   const lastMsgIdRef = useRef(null);
 
-  // Load threads
+  // On mobile, default to sidebar visible (thread list)
+  // When a thread is selected, show messages
+  const [mobileView, setMobileView] = useState("threads"); // "threads" | "messages"
+
   useEffect(() => {
     async function load() {
       const res = await fetch(`/api/houses/${houseId}/threads`);
@@ -527,14 +422,16 @@ export default function ChatPage() {
         setThreads(json.data);
         const general =
           json.data.find((t) => t.type === "general") || json.data[0];
-        if (general) setActiveThread(general);
+        if (general) {
+          setActiveThread(general);
+          setMobileView("messages");
+        }
       }
       setLoadingThreads(false);
     }
     load();
   }, [houseId]);
 
-  // Load polls
   useEffect(() => {
     async function loadPolls() {
       const res = await fetch(`/api/houses/${houseId}/polls`);
@@ -544,7 +441,6 @@ export default function ChatPage() {
     loadPolls();
   }, [houseId]);
 
-  // Load messages + start poll when active thread changes
   useEffect(() => {
     if (!activeThread) return;
     clearInterval(pollRef.current);
@@ -597,14 +493,16 @@ export default function ChatPage() {
     setText("");
 
     const tempId = `tmp_${Date.now()}`;
-    const tmpMsg = {
-      _id: tempId,
-      text: t,
-      senderId: { name: "You" },
-      createdAt: new Date().toISOString(),
-      _temp: true,
-    };
-    setMessages((p) => [...p, tmpMsg]);
+    setMessages((p) => [
+      ...p,
+      {
+        _id: tempId,
+        text: t,
+        senderId: { name: "You" },
+        createdAt: new Date().toISOString(),
+        _temp: true,
+      },
+    ]);
     scrollBottom();
 
     try {
@@ -653,6 +551,7 @@ export default function ChatPage() {
       if (json.success) {
         setThreads((p) => [...p, json.data]);
         setActiveThread(json.data);
+        setMobileView("messages");
         setNewThreadName("");
         setShowNewThread(false);
         toast.success("Channel created.");
@@ -687,7 +586,6 @@ export default function ChatPage() {
     }
   }
 
-  // Group consecutive messages from same sender within 5 min
   const grouped = [];
   messages.forEach((msg, i) => {
     const prev = messages[i - 1];
@@ -699,7 +597,6 @@ export default function ChatPage() {
     else grouped.push({ sender: msg.senderId, msgs: [msg] });
   });
 
-  // Polls not tied to any thread show in general
   const threadPolls = polls.filter(
     (p) =>
       activeThread &&
@@ -715,200 +612,202 @@ export default function ChatPage() {
     );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "calc(100vh - 84px)",
-        border: "1px solid var(--glass-border)",
-        borderRadius: 16,
-        overflow: "hidden",
-      }}
-    >
-      {/* Sidebar */}
+    <>
+      {/* Desktop layout */}
       <div
+        className="chat-desktop"
         style={{
-          width: 210,
-          flexShrink: 0,
-          borderRight: "1px solid var(--glass-border)",
           display: "flex",
-          flexDirection: "column",
-          background: "var(--bg-mid)",
+          height: "calc(100vh - 84px)",
+          border: "1px solid var(--glass-border)",
+          borderRadius: 16,
+          overflow: "hidden",
         }}
       >
+        {/* Sidebar */}
         <div
           style={{
-            padding: "13px 14px 10px",
-            borderBottom: "1px solid var(--glass-border)",
+            width: 210,
+            flexShrink: 0,
+            borderRight: "1px solid var(--glass-border)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            flexDirection: "column",
+            background: "var(--bg-mid)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <MessageSquare size={14} color="var(--accent)" />
-            <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>
-              Channels
-            </span>
-          </div>
-          <button
-            onClick={() => setShowNewThread((v) => !v)}
+          <div
             style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--muted)",
-              padding: 3,
-            }}
-          >
-            {showNewThread ? <X size={14} /> : <Plus size={14} />}
-          </button>
-        </div>
-
-        {showNewThread && (
-          <form
-            onSubmit={handleCreateThread}
-            style={{
-              padding: "9px 10px",
+              padding: "13px 14px 10px",
               borderBottom: "1px solid var(--glass-border)",
               display: "flex",
-              gap: 6,
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <input
-              autoFocus
-              style={{
-                flex: 1,
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 7,
-                padding: "6px 9px",
-                color: "var(--text)",
-                fontSize: "0.78rem",
-                outline: "none",
-              }}
-              placeholder="channel-name"
-              value={newThreadName}
-              onChange={(e) => setNewThreadName(e.target.value)}
-              maxLength={80}
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <MessageSquare size={14} color="var(--accent)" />
+              <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>
+                Channels
+              </span>
+            </div>
             <button
-              type="submit"
-              disabled={creatingThread}
+              onClick={() => setShowNewThread((v) => !v)}
               style={{
-                background: "var(--accent)",
+                background: "none",
                 border: "none",
-                borderRadius: 7,
-                padding: "6px 9px",
-                color: "#fff",
                 cursor: "pointer",
-                fontSize: "0.72rem",
-                fontWeight: 600,
+                color: "var(--muted)",
+                padding: 3,
               }}
             >
-              {creatingThread ? (
-                <Loader2
-                  size={11}
-                  style={{ animation: "spin 1s linear infinite" }}
-                />
-              ) : (
-                "Add"
-              )}
+              {showNewThread ? <X size={14} /> : <Plus size={14} />}
             </button>
-          </form>
-        )}
+          </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "6px 8px" }}>
-          {threads.map((t) => {
-            const on = activeThread?._id === t._id;
-            return (
-              <button
-                key={t._id}
-                onClick={() => setActiveThread(t)}
+          {showNewThread && (
+            <form
+              onSubmit={handleCreateThread}
+              style={{
+                padding: "9px 10px",
+                borderBottom: "1px solid var(--glass-border)",
+                display: "flex",
+                gap: 6,
+              }}
+            >
+              <input
+                autoFocus
                 style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  padding: "7px 9px",
-                  borderRadius: 8,
-                  marginBottom: 1,
-                  background: on ? "var(--glass-bg-mid)" : "transparent",
-                  border: on
-                    ? "1px solid var(--glass-border)"
-                    : "1px solid transparent",
+                  flex: 1,
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: 7,
+                  padding: "6px 9px",
+                  color: "var(--text)",
+                  fontSize: "0.78rem",
+                  outline: "none",
+                }}
+                placeholder="channel-name"
+                value={newThreadName}
+                onChange={(e) => setNewThreadName(e.target.value)}
+                maxLength={80}
+              />
+              <button
+                type="submit"
+                disabled={creatingThread}
+                style={{
+                  background: "var(--accent)",
+                  border: "none",
+                  borderRadius: 7,
+                  padding: "6px 9px",
+                  color: "#fff",
                   cursor: "pointer",
-                  textAlign: "left",
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
                 }}
               >
-                <Hash
-                  size={12}
-                  color={on ? "var(--accent)" : "var(--muted)"}
-                  style={{ flexShrink: 0 }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: on ? 600 : 400,
-                      color: on ? "var(--text)" : "var(--muted)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {t.name}
-                  </div>
-                  {t.lastMessageText && (
+                {creatingThread ? (
+                  <Loader2
+                    size={11}
+                    style={{ animation: "spin 1s linear infinite" }}
+                  />
+                ) : (
+                  "Add"
+                )}
+              </button>
+            </form>
+          )}
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "6px 8px" }}>
+            {threads.map((t) => {
+              const on = activeThread?._id === t._id;
+              return (
+                <button
+                  key={t._id}
+                  onClick={() => setActiveThread(t)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    padding: "7px 9px",
+                    borderRadius: 8,
+                    marginBottom: 1,
+                    background: on ? "var(--glass-bg-mid)" : "transparent",
+                    border: on
+                      ? "1px solid var(--glass-border)"
+                      : "1px solid transparent",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <Hash
+                    size={12}
+                    color={on ? "var(--accent)" : "var(--muted)"}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: "0.67rem",
-                        color: "var(--muted)",
+                        fontSize: "0.82rem",
+                        fontWeight: on ? 600 : 400,
+                        color: on ? "var(--text)" : "var(--muted)",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        marginTop: 1,
                       }}
                     >
-                      {t.lastMessageText}
+                      {t.name}
                     </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                    {t.lastMessageText && (
+                      <div
+                        style={{
+                          fontSize: "0.67rem",
+                          color: "var(--muted)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          marginTop: 1,
+                        }}
+                      >
+                        {t.lastMessageText}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Message area */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-        }}
-      >
-        {activeThread ? (
-          <>
-            {/* Header */}
-            <div
-              style={{
-                padding: "12px 18px",
-                borderBottom: "1px solid var(--glass-border)",
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                flexShrink: 0,
-              }}
-            >
-              <Hash size={16} color="var(--accent)" />
-              <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                {activeThread.name}
-              </span>
-              <div style={{ marginLeft: "auto" }}>
+        {/* Message area */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+          }}
+        >
+          {activeThread ? (
+            <>
+              <div
+                style={{
+                  padding: "12px 18px",
+                  borderBottom: "1px solid var(--glass-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  flexShrink: 0,
+                }}
+              >
+                <Hash size={16} color="var(--accent)" />
+                <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  {activeThread.name}
+                </span>
                 <button
                   onClick={() => setShowNewPoll(true)}
                   style={{
+                    marginLeft: "auto",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
@@ -925,17 +824,441 @@ export default function ChatPage() {
                   <BarChart2 size={12} /> Poll
                 </button>
               </div>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "14px 18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                }}
+              >
+                {loadingMsgs ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flex: 1,
+                    }}
+                  >
+                    <Loader2
+                      size={20}
+                      style={{
+                        animation: "spin 1s linear infinite",
+                        color: "var(--muted)",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {threadPolls.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        {threadPolls.map((poll) => (
+                          <PollCard
+                            key={poll._id}
+                            poll={poll}
+                            onVote={handleVote}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {grouped.length === 0 && threadPolls.length === 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flex: 1,
+                          color: "var(--muted)",
+                          textAlign: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <Hash size={32} style={{ opacity: 0.15 }} />
+                        <p style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+                          #{activeThread.name}
+                        </p>
+                        <p style={{ fontSize: "0.8rem" }}>
+                          No messages yet. Say something!
+                        </p>
+                      </div>
+                    ) : (
+                      grouped.map((group, gi) => (
+                        <div
+                          key={group.msgs[0]._id}
+                          style={{
+                            display: "flex",
+                            gap: 10,
+                            marginTop: gi === 0 ? 0 : 12,
+                          }}
+                        >
+                          <Avatar name={group.sender?.name} size={32} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: 8,
+                                marginBottom: 2,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "0.84rem",
+                                  fontWeight: 700,
+                                  color: group.msgs[0]._temp
+                                    ? "var(--muted)"
+                                    : "var(--text)",
+                                }}
+                              >
+                                {group.sender?.name || "Unknown"}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.67rem",
+                                  color: "var(--muted)",
+                                }}
+                              >
+                                {fmtTime(group.msgs[0].createdAt)}
+                              </span>
+                            </div>
+                            {group.msgs.map((msg) => (
+                              <div
+                                key={msg._id}
+                                style={{
+                                  fontSize: "0.875rem",
+                                  lineHeight: 1.55,
+                                  color: "var(--text)",
+                                  wordBreak: "break-word",
+                                  opacity: msg._temp ? 0.5 : 1,
+                                  marginBottom: 1,
+                                }}
+                              >
+                                {msg.text}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
+                <div ref={bottomRef} />
+              </div>
+              <div
+                style={{
+                  padding: "10px 14px 12px",
+                  borderTop: "1px solid var(--glass-border)",
+                  flexShrink: 0,
+                }}
+              >
+                <form
+                  onSubmit={handleSend}
+                  style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
+                >
+                  <textarea
+                    ref={inputRef}
+                    value={text}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      e.target.style.height = "auto";
+                      e.target.style.height =
+                        Math.min(e.target.scrollHeight, 120) + "px";
+                    }}
+                    onKeyDown={handleKey}
+                    placeholder={`Message #${activeThread.name}`}
+                    rows={1}
+                    maxLength={2000}
+                    style={{
+                      flex: 1,
+                      background: "var(--glass-bg)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: 10,
+                      padding: "9px 13px",
+                      color: "var(--text)",
+                      fontSize: "0.875rem",
+                      outline: "none",
+                      resize: "none",
+                      fontFamily: "inherit",
+                      lineHeight: 1.5,
+                      maxHeight: 120,
+                      overflowY: "auto",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!text.trim() || sending}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 9,
+                      background: text.trim()
+                        ? "var(--accent)"
+                        : "var(--glass-bg-mid)",
+                      border: "none",
+                      cursor: text.trim() ? "pointer" : "not-allowed",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {sending ? (
+                      <Loader2
+                        size={14}
+                        style={{
+                          animation: "spin 1s linear infinite",
+                          color: "var(--muted)",
+                        }}
+                      />
+                    ) : (
+                      <Send
+                        size={14}
+                        color={text.trim() ? "#fff" : "var(--muted)"}
+                      />
+                    )}
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--muted)",
+              }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <MessageSquare
+                  size={36}
+                  style={{ marginBottom: 12, opacity: 0.15 }}
+                />
+                <p style={{ fontSize: "0.9rem" }}>Select a channel</p>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Messages + polls */}
+      {/* Mobile layout */}
+      <div
+        className="chat-mobile"
+        style={{
+          display: "none",
+          flexDirection: "column",
+          height: "calc(100vh - 56px - 32px)",
+        }}
+      >
+        {mobileView === "threads" ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              border: "1px solid var(--glass-border)",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "13px 16px",
+                borderBottom: "1px solid var(--glass-border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "var(--bg-mid)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <MessageSquare size={14} color="var(--accent)" />
+                <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                  Channels
+                </span>
+              </div>
+              <button
+                onClick={() => setShowNewThread((v) => !v)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                }}
+              >
+                {showNewThread ? <X size={16} /> : <Plus size={16} />}
+              </button>
+            </div>
+            {showNewThread && (
+              <form
+                onSubmit={handleCreateThread}
+                style={{
+                  padding: "10px 12px",
+                  borderBottom: "1px solid var(--glass-border)",
+                  display: "flex",
+                  gap: 8,
+                }}
+              >
+                <input
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                    color: "var(--text)",
+                    fontSize: "0.875rem",
+                    outline: "none",
+                  }}
+                  placeholder="channel-name"
+                  value={newThreadName}
+                  onChange={(e) => setNewThreadName(e.target.value)}
+                  maxLength={80}
+                />
+                <button
+                  type="submit"
+                  disabled={creatingThread}
+                  style={{
+                    background: "var(--accent)",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "8px 14px",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Add
+                </button>
+              </form>
+            )}
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+              {threads.map((t) => (
+                <button
+                  key={t._id}
+                  onClick={() => {
+                    setActiveThread(t);
+                    setMobileView("messages");
+                  }}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    marginBottom: 4,
+                    background: "var(--glass-bg)",
+                    border: "1px solid var(--glass-border)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <Hash
+                    size={14}
+                    color="var(--muted)"
+                    style={{ flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                        color: "var(--text)",
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                    {t.lastMessageText && (
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--muted)",
+                          marginTop: 2,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {t.lastMessageText}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              border: "1px solid var(--glass-border)",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 14px",
+                borderBottom: "1px solid var(--glass-border)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: "var(--bg-mid)",
+                flexShrink: 0,
+              }}
+            >
+              <button
+                onClick={() => setMobileView("threads")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                  padding: 4,
+                }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <Hash size={15} color="var(--accent)" />
+              <span style={{ fontWeight: 700, fontSize: "0.9rem", flex: 1 }}>
+                {activeThread?.name}
+              </span>
+              <button
+                onClick={() => setShowNewPoll(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "5px 10px",
+                  borderRadius: 50,
+                  background: "var(--glass-bg-mid)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--muted)",
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <BarChart2 size={11} /> Poll
+              </button>
+            </div>
             <div
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: "14px 18px",
+                padding: "12px 14px",
                 display: "flex",
                 flexDirection: "column",
-                gap: 0,
               }}
             >
               {loadingMsgs ? (
@@ -957,7 +1280,6 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <>
-                  {/* Active polls for this thread */}
                   {threadPolls.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                       {threadPolls.map((poll) => (
@@ -969,96 +1291,70 @@ export default function ChatPage() {
                       ))}
                     </div>
                   )}
-
-                  {grouped.length === 0 && threadPolls.length === 0 ? (
+                  {grouped.map((group, gi) => (
                     <div
+                      key={group.msgs[0]._id}
                       style={{
                         display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flex: 1,
-                        color: "var(--muted)",
-                        textAlign: "center",
-                        gap: 8,
+                        gap: 9,
+                        marginTop: gi === 0 ? 0 : 12,
                       }}
                     >
-                      <Hash size={32} style={{ opacity: 0.15 }} />
-                      <p style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-                        #{activeThread.name}
-                      </p>
-                      <p style={{ fontSize: "0.8rem" }}>
-                        No messages yet. Say something!
-                      </p>
-                    </div>
-                  ) : (
-                    grouped.map((group, gi) => (
-                      <div
-                        key={group.msgs[0]._id}
-                        style={{
-                          display: "flex",
-                          gap: 10,
-                          marginTop: gi === 0 ? 0 : 12,
-                        }}
-                      >
-                        <Avatar name={group.sender?.name} size={32} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
+                      <Avatar name={group.sender?.name} size={28} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "baseline",
+                            gap: 7,
+                            marginBottom: 2,
+                          }}
+                        >
+                          <span
                             style={{
-                              display: "flex",
-                              alignItems: "baseline",
-                              gap: 8,
-                              marginBottom: 2,
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              color: group.msgs[0]._temp
+                                ? "var(--muted)"
+                                : "var(--text)",
                             }}
                           >
-                            <span
-                              style={{
-                                fontSize: "0.84rem",
-                                fontWeight: 700,
-                                color: group.msgs[0]._temp
-                                  ? "var(--muted)"
-                                  : "var(--text)",
-                              }}
-                            >
-                              {group.sender?.name || "Unknown"}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.67rem",
-                                color: "var(--muted)",
-                              }}
-                            >
-                              {fmtTime(group.msgs[0].createdAt)}
-                            </span>
-                          </div>
-                          {group.msgs.map((msg) => (
-                            <div
-                              key={msg._id}
-                              style={{
-                                fontSize: "0.875rem",
-                                lineHeight: 1.55,
-                                color: "var(--text)",
-                                wordBreak: "break-word",
-                                opacity: msg._temp ? 0.5 : 1,
-                                marginBottom: 1,
-                              }}
-                            >
-                              {msg.text}
-                            </div>
-                          ))}
+                            {group.sender?.name || "Unknown"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.65rem",
+                              color: "var(--muted)",
+                            }}
+                          >
+                            {fmtTime(group.msgs[0].createdAt)}
+                          </span>
                         </div>
+                        {group.msgs.map((msg) => (
+                          <div
+                            key={msg._id}
+                            style={{
+                              fontSize: "0.875rem",
+                              lineHeight: 1.55,
+                              color: "var(--text)",
+                              wordBreak: "break-word",
+                              opacity: msg._temp ? 0.5 : 1,
+                              marginBottom: 1,
+                            }}
+                          >
+                            {msg.text}
+                          </div>
+                        ))}
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </>
               )}
               <div ref={bottomRef} />
             </div>
-
-            {/* Input */}
             <div
               style={{
-                padding: "10px 14px 12px",
+                padding: "10px 12px 12px",
                 borderTop: "1px solid var(--glass-border)",
                 flexShrink: 0,
               }}
@@ -1074,10 +1370,10 @@ export default function ChatPage() {
                     setText(e.target.value);
                     e.target.style.height = "auto";
                     e.target.style.height =
-                      Math.min(e.target.scrollHeight, 120) + "px";
+                      Math.min(e.target.scrollHeight, 100) + "px";
                   }}
                   onKeyDown={handleKey}
-                  placeholder={`Message #${activeThread.name}`}
+                  placeholder="Message…"
                   rows={1}
                   maxLength={2000}
                   style={{
@@ -1087,12 +1383,12 @@ export default function ChatPage() {
                     borderRadius: 10,
                     padding: "9px 13px",
                     color: "var(--text)",
-                    fontSize: "0.875rem",
+                    fontSize: "0.9rem",
                     outline: "none",
                     resize: "none",
                     fontFamily: "inherit",
                     lineHeight: 1.5,
-                    maxHeight: 120,
+                    maxHeight: 100,
                     overflowY: "auto",
                   }}
                 />
@@ -1100,9 +1396,9 @@ export default function ChatPage() {
                   type="submit"
                   disabled={!text.trim() || sending}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9,
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
                     background: text.trim()
                       ? "var(--accent)"
                       : "var(--glass-bg-mid)",
@@ -1112,7 +1408,6 @@ export default function ChatPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
-                    transition: "background 0.15s",
                   }}
                 >
                   {sending ? (
@@ -1131,40 +1426,11 @@ export default function ChatPage() {
                   )}
                 </button>
               </form>
-              <div
-                style={{
-                  fontSize: "0.67rem",
-                  color: "var(--muted)",
-                  marginTop: 4,
-                  paddingLeft: 1,
-                }}
-              >
-                Enter to send · Shift+Enter for new line
-              </div>
-            </div>
-          </>
-        ) : (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--muted)",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <MessageSquare
-                size={36}
-                style={{ marginBottom: 12, opacity: 0.15 }}
-              />
-              <p style={{ fontSize: "0.9rem" }}>Select a channel</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Poll creation modal */}
       {showNewPoll && (
         <CreatePollModal
           houseId={houseId}
@@ -1189,7 +1455,17 @@ export default function ChatPage() {
         />
       )}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .chat-desktop { display: none !important; }
+          .chat-mobile { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .chat-desktop { display: flex !important; }
+          .chat-mobile { display: none !important; }
+        }
+      `}</style>
+    </>
   );
 }

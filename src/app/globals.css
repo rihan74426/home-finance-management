@@ -210,3 +210,173 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE UTILITIES — append these to the bottom of globals.css
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Fluid spacing ── */
+.page-pad {
+  padding: clamp(14px, 4vw, 28px);
+}
+
+/* ── Cards grid: 1 col on mobile, auto-fill on larger ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 14px;
+}
+
+/* ── Stats grid: 2 col on mobile, 3+ on larger ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  gap: 12px;
+}
+
+/* ── Two-column form grid: collapses to 1 on mobile ── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Modal: full-screen on mobile ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-box {
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 92vh;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── Table: horizontal scroll on mobile ── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Hide on mobile ── */
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ── Show only on mobile ── */
+@media (min-width: 641px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+/* ── Responsive text ── */
+.heading-lg {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.heading-md {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ── Chat layout: full height minus topbar on mobile ── */
+@media (max-width: 768px) {
+  .chat-container {
+    height: calc(100vh - 56px) !important;
+  }
+
+  .chat-sidebar {
+    width: 180px !important;
+  }
+}
+
+/* ── Touch-friendly tap targets ── */
+@media (max-width: 768px) {
+  button,
+  a {
+    min-height: 36px;
+  }
+}
+
+/* ── Ledger/bills stats: 2-col on small mobile ── */
+@media (max-width: 400px) {
+  .stats-3col {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* ── Page header: stack on mobile ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ── Filter pills: horizontal scroll on mobile ── */
+.filter-pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.filter-pills::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Members grid: 1 col on mobile ── */
+@media (max-width: 640px) {
+  .member-card {
+    flex-wrap: wrap;
+  }
+
+  .member-card .rent-amount {
+    display: none;
+  }
+}
+
+/* ── Vault grid: 1 col on mobile ── */
+@media (max-width: 480px) {
+  .vault-type-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* ── House overview grid ── */
+@media (max-width: 640px) {
+  .house-overview-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

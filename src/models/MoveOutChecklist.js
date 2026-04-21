@@ -51,7 +51,6 @@ const MoveOutChecklistSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Membership",
       required: true,
-      index: true,
     },
     userId: {
       type: Schema.Types.ObjectId,
