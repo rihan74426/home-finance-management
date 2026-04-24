@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { TASK_PRIORITY, TASK_CATEGORY, TASK_STATUS } from "@/lib/constants";
 import { TasksSkeleton } from "@/components/ui/Skeleton";
+import { useUndo } from "@/hooks/useUndo";
 
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "var(--muted)" },
@@ -69,6 +70,7 @@ const lS = {
 
 export default function TasksPage() {
   const { houseId } = useParams();
+  const { withUndo } = useUndo(5000);
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,29 +137,41 @@ export default function TasksPage() {
     }
   }
 
-  async function toggleDone(task) {
+  function toggleDone(task) {
     const newStatus =
       task.status === TASK_STATUS.DONE ? TASK_STATUS.TODO : TASK_STATUS.DONE;
-    setTasks((p) =>
-      p.map((t) => (t._id === task._id ? { ...t, status: newStatus } : t))
-    );
-    const res = await fetch(`/api/tasks/${task._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+    const prevTasks = [...tasks];
+
+    withUndo({
+      message:
+        newStatus === TASK_STATUS.DONE ? "Task marked done" : "Task reopened",
+      optimisticUpdate: () =>
+        setTasks((p) =>
+          p.map((t) => (t._id === task._id ? { ...t, status: newStatus } : t))
+        ),
+      revert: () => setTasks(prevTasks),
+      apiCall: async () => {
+        const res = await fetch(`/api/tasks/${task._id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+      },
     });
-    const json = await res.json();
-    if (!json.success) {
-      setTasks((p) => p.map((t) => (t._id === task._id ? task : t)));
-      toast.error("Failed to update task.");
-    }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this task?")) return;
-    setTasks((p) => p.filter((t) => t._id !== id));
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-    toast.success("Task deleted.");
+  function handleDelete(id) {
+    const prevTasks = [...tasks];
+    const task = tasks.find((t) => t._id === id);
+
+    withUndo({
+      message: `Task "${task?.title || "task"}" deleted`,
+      optimisticUpdate: () => setTasks((p) => p.filter((t) => t._id !== id)),
+      revert: () => setTasks(prevTasks),
+      apiCall: () => fetch(`/api/tasks/${id}`, { method: "DELETE" }),
+    });
   }
 
   const filtered = tasks.filter((t) => {
@@ -224,7 +238,15 @@ export default function TasksPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          marginBottom: 20,
+          overflowX: "auto",
+          paddingBottom: 4,
+        }}
+      >
         {[
           ["active", "Active"],
           ["done", "Done"],
@@ -240,7 +262,7 @@ export default function TasksPage() {
               fontWeight: 600,
               border: "1px solid",
               cursor: "pointer",
-              transition: "all 0.15s",
+              whiteSpace: "nowrap",
               borderColor:
                 filter === v ? "var(--accent)" : "var(--glass-border)",
               background: filter === v ? "var(--accent-dim)" : "transparent",
@@ -395,6 +417,7 @@ export default function TasksPage() {
                 style={{
                   padding: "11px",
                   borderRadius: 10,
+                  marginTop: 4,
                   background: submitting
                     ? "var(--glass-bg-mid)"
                     : "var(--accent)",
@@ -407,7 +430,6 @@ export default function TasksPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  marginTop: 4,
                 }}
               >
                 {submitting && (

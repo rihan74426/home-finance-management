@@ -6,6 +6,8 @@ import Invite from "@/models/Invite";
 import House from "@/models/House";
 import { INVITE_STATUS, NOTIFICATION_TYPE } from "@/lib/constants";
 import { createNotification } from "@/lib/notifications";
+import { sendMemberJoinedEmail } from "@/lib/email";
+import { sendMemberJoinedSMS } from "@/lib/sms";
 
 export async function GET(req, { params }) {
   await connectDB();
@@ -108,9 +110,12 @@ export async function POST(req, { params }) {
     },
   });
 
-  // Notify the manager who sent the invite
+  // Get house + inviter details for notifications
   const house = await House.findById(invite.houseId).lean();
-  if (house) {
+  const inviter = await User.findById(invite.invitedBy).lean();
+
+  if (house && inviter) {
+    // In-app notification
     await createNotification({
       userId: invite.invitedBy,
       houseId: invite.houseId,
@@ -119,6 +124,30 @@ export async function POST(req, { params }) {
       body: `They accepted your invite as ${invite.role}.`,
       meta: { membershipId: membership._id },
     });
+
+    // Email notification to manager/inviter
+    if (inviter.email && !inviter.email.includes("placeholder.homy")) {
+      sendMemberJoinedEmail({
+        to: inviter.email,
+        name: inviter.name,
+        houseName: house.name,
+        newMemberName: user.name,
+        role: invite.role,
+      }).catch((err) =>
+        console.error("[invite-accept] Email failed:", err.message)
+      );
+    }
+
+    // SMS notification to manager/inviter if they have a phone
+    if (inviter.phone) {
+      sendMemberJoinedSMS({
+        to: inviter.phone,
+        newMemberName: user.name,
+        houseName: house.name,
+      }).catch((err) =>
+        console.error("[invite-accept] SMS failed:", err.message)
+      );
+    }
   }
 
   return Response.json({

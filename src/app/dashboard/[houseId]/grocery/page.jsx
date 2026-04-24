@@ -13,8 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { useUndo } from "@/hooks/useUndo";
 
-const GROCERY_POLL_INTERVAL = 5000; // 5s — less aggressive than chat
+const GROCERY_POLL_INTERVAL = 5000;
 
 const CATEGORIES = [
   { value: "all", label: "All" },
@@ -97,6 +98,7 @@ const iS = {
 
 export default function GroceryPage() {
   const { houseId } = useParams();
+  const { withUndo } = useUndo(5000);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showBought, setShowBought] = useState(false);
@@ -113,9 +115,7 @@ export default function GroceryPage() {
   const [error, setError] = useState(null);
   const nameRef = useRef(null);
   const pollRef = useRef(null);
-  // Track IDs currently being optimistically updated so polling doesn't stomp them
   const pendingIds = useRef(new Set());
-
   const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const fetchItems = useCallback(
@@ -127,9 +127,7 @@ export default function GroceryPage() {
         const json = await res.json();
         if (json.success) {
           setItems((prev) => {
-            // Don't overwrite items currently being toggled (optimistic updates)
             if (pendingIds.current.size === 0) return json.data;
-            // Merge: keep optimistic state for pending items
             const byId = Object.fromEntries(json.data.map((i) => [i._id, i]));
             return prev
               .map((item) =>
@@ -141,7 +139,6 @@ export default function GroceryPage() {
           });
         }
       } catch {
-        // silent polling failure — don't toast
       } finally {
         if (!silent) setLoading(false);
       }
@@ -149,19 +146,15 @@ export default function GroceryPage() {
     [houseId]
   );
 
-  // Initial load
   useEffect(() => {
     fetchItems(false, false);
   }, [fetchItems]);
-
-  // Real-time polling
   useEffect(() => {
     pollRef.current = setInterval(() => {
       fetchItems(showBought, true);
     }, GROCERY_POLL_INTERVAL);
     return () => clearInterval(pollRef.current);
   }, [fetchItems, showBought]);
-
   useEffect(() => {
     if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
   }, [showForm]);
@@ -196,40 +189,54 @@ export default function GroceryPage() {
     }
   }
 
-  async function toggleBought(item) {
+  function toggleBought(item) {
     const next = !item.isBought;
+    const prevItems = [...items];
     pendingIds.current.add(item._id);
     setToggling((p) => ({ ...p, [item._id]: true }));
-    setItems((p) =>
-      p.map((i) => (i._id === item._id ? { ...i, isBought: next } : i))
-    );
-    try {
-      const res = await fetch(`/api/grocery/${item._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isBought: next }),
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      setItems((p) =>
-        p.map((i) =>
-          i._id === item._id ? { ...i, isBought: item.isBought } : i
-        )
-      );
-      toast.error("Failed to update item.");
-    } finally {
-      setToggling((p) => ({ ...p, [item._id]: false }));
-      pendingIds.current.delete(item._id);
-    }
+
+    withUndo({
+      message: next
+        ? `"${item.name}" marked as bought`
+        : `"${item.name}" unmarked`,
+      optimisticUpdate: () =>
+        setItems((p) =>
+          p.map((i) => (i._id === item._id ? { ...i, isBought: next } : i))
+        ),
+      revert: () => {
+        setItems(prevItems);
+        pendingIds.current.delete(item._id);
+        setToggling((p) => ({ ...p, [item._id]: false }));
+      },
+      apiCall: async () => {
+        const res = await fetch(`/api/grocery/${item._id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isBought: next }),
+        });
+        if (!res.ok) throw new Error();
+      },
+      onSuccess: () => {
+        pendingIds.current.delete(item._id);
+        setToggling((p) => ({ ...p, [item._id]: false }));
+      },
+      onError: () => {
+        pendingIds.current.delete(item._id);
+        setToggling((p) => ({ ...p, [item._id]: false }));
+      },
+    });
   }
 
-  async function handleDelete(id) {
-    setItems((p) => p.filter((i) => i._id !== id));
-    const res = await fetch(`/api/grocery/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      toast.error("Failed to delete item.");
-      fetchItems(showBought, true);
-    }
+  function handleDelete(id) {
+    const prevItems = [...items];
+    const item = items.find((i) => i._id === id);
+
+    withUndo({
+      message: `"${item?.name || "Item"}" removed from list`,
+      optimisticUpdate: () => setItems((p) => p.filter((i) => i._id !== id)),
+      revert: () => setItems(prevItems),
+      apiCall: () => fetch(`/api/grocery/${id}`, { method: "DELETE" }),
+    });
   }
 
   async function handleToggleShowBought() {
@@ -253,7 +260,6 @@ export default function GroceryPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -301,7 +307,6 @@ export default function GroceryPage() {
             fontSize: "0.825rem",
             border: showForm ? "1px solid var(--glass-border)" : "none",
             cursor: "pointer",
-            transition: "all 0.15s",
           }}
         >
           {showForm ? (
@@ -316,7 +321,6 @@ export default function GroceryPage() {
         </button>
       </div>
 
-      {/* Inline add form */}
       {showForm && (
         <div
           style={{
@@ -433,7 +437,15 @@ export default function GroceryPage() {
 
       {/* Category filter pills */}
       <div
-        style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}
+        style={{
+          display: "flex",
+          gap: 6,
+          flexWrap: "nowrap",
+          overflowX: "auto",
+          marginBottom: 18,
+          paddingBottom: 4,
+          scrollbarWidth: "none",
+        }}
       >
         {CATEGORIES.map((c) => {
           const on = catFilter === c.value;
@@ -448,7 +460,7 @@ export default function GroceryPage() {
                 fontWeight: 600,
                 border: "1px solid",
                 cursor: "pointer",
-                transition: "all 0.12s",
+                whiteSpace: "nowrap",
                 borderColor: on ? "var(--accent)" : "var(--glass-border)",
                 background: on ? "var(--accent-dim)" : "transparent",
                 color: on ? "var(--accent)" : "var(--muted)",
@@ -460,7 +472,6 @@ export default function GroceryPage() {
         })}
       </div>
 
-      {/* Empty state */}
       {active.length === 0 && bought.length === 0 ? (
         <div
           style={{
@@ -495,7 +506,6 @@ export default function GroceryPage() {
               ))}
             </div>
           )}
-
           {bought.length > 0 && (
             <div>
               <button
@@ -545,8 +555,7 @@ export default function GroceryPage() {
           )}
         </>
       )}
-
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } select option { background: #0e1520; color: #f0ede8; }`}</style>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8} .filter-scroll::-webkit-scrollbar{display:none}`}</style>
     </div>
   );
 }
@@ -580,7 +589,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           justifyContent: "center",
           cursor: "pointer",
           flexShrink: 0,
-          transition: "all 0.15s",
         }}
       >
         {toggling ? (
@@ -687,7 +695,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           padding: 3,
           flexShrink: 0,
           opacity: 0.6,
-          lineHeight: 1,
         }}
       >
         <Trash2 size={13} />

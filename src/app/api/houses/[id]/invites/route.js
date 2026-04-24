@@ -4,12 +4,22 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import Invite from "@/models/Invite";
 import House from "@/models/House";
-import { ROLES, INVITE_STATUS } from "@/lib/constants";
+import { ROLES, INVITE_STATUS, HOUSE_TYPE } from "@/lib/constants";
 import { getRequestIdentifier, limitApi } from "@/lib/rateLimit";
+import { sendInviteEmail } from "@/lib/email";
+import { sendInviteSMS } from "@/lib/sms";
+
+const HOUSE_TYPE_LABELS = {
+  [HOUSE_TYPE.FLAT]: "Flat",
+  [HOUSE_TYPE.VILLA]: "Villa",
+  [HOUSE_TYPE.FAMILY]: "Family Home",
+  [HOUSE_TYPE.CO_LIVING]: "Co-Living",
+  [HOUSE_TYPE.DORMITORY]: "Dormitory",
+  [HOUSE_TYPE.OTHER]: "House",
+};
 
 // POST /api/houses/[id]/invites — manager creates an invite link
 export async function POST(req, { params }) {
-  // rate limit: create invite (invite-specific)
   const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
   const maybeBlocked = limitApi(identifier, "invite");
   if (maybeBlocked) return maybeBlocked;
@@ -63,7 +73,7 @@ export async function POST(req, { params }) {
       { status: 400 }
     );
 
-  // Cancel any existing pending invite for same email/phone in this house
+  // Cancel existing pending invites for same contact
   if (email)
     await Invite.updateMany(
       { houseId: id, email, status: INVITE_STATUS.PENDING },
@@ -86,6 +96,33 @@ export async function POST(req, { params }) {
 
   const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${invite.token}`;
 
+  // Send email invite (fire-and-forget — don't fail the request if email fails)
+  if (email) {
+    sendInviteEmail({
+      to: email,
+      name: name || undefined,
+      inviterName: user.name,
+      houseName: house.name,
+      houseType: HOUSE_TYPE_LABELS[house.type] || "House",
+      houseCity: house.address?.city || null,
+      role: invite.role,
+      inviteUrl,
+      expiresAt: invite.expiresAt,
+    }).catch((err) =>
+      console.error("[invite] Email send failed:", err.message)
+    );
+  }
+
+  // Send SMS invite (fire-and-forget)
+  if (phone) {
+    sendInviteSMS({
+      to: phone,
+      inviterName: user.name,
+      houseName: house.name,
+      inviteUrl,
+    }).catch((err) => console.error("[invite] SMS send failed:", err.message));
+  }
+
   return Response.json(
     { success: true, data: { invite, inviteUrl } },
     { status: 201 }
@@ -94,7 +131,6 @@ export async function POST(req, { params }) {
 
 // GET /api/houses/[id]/invites — list pending invites (manager only)
 export async function GET(req, { params }) {
-  // rate limit: invites read
   const identifier = getRequestIdentifier(req) || (params?.id ?? "anon");
   const maybeBlocked = limitApi(identifier, "read");
   if (maybeBlocked) return maybeBlocked;
@@ -129,6 +165,5 @@ export async function GET(req, { params }) {
   })
     .sort({ createdAt: -1 })
     .lean();
-
   return Response.json({ success: true, data: invites });
 }

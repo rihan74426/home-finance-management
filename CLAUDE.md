@@ -187,3 +187,47 @@ Invite, Notification, MemberDocument
 | Bug fix session | Middleware rename, Mongoose hook fix, nav routing fix                                |
 | Session N       | Grocery + Chat, Bills + Split, Polls, architecture docs                              |
 | Session N+1     | Notifications model+API+bell UI, vault page fix, 5 route bug fixes, Phase 1 complete |
+
+PHASE 2 — NEXT SESSIONS (PRIORITY ORDER)
+
+SESSION A — Undo Feature (medium complexity, high value)
+
+1. Create src/hooks/useUndo.js — universal hook using sonner action toasts
+2. Wire into: tasks/page.jsx, grocery/page.jsx, vault/page.jsx,
+   members/page.jsx, rules/page.jsx, bills/page.jsx
+   Pattern: optimistic update → 5s delay toast with Undo → API fires on expiry
+
+SESSION B — Email & SMS (external services, env vars needed)
+
+1. Resend setup: src/lib/email.js
+   - sendInviteEmail(invite, inviteUrl)
+   - sendRentReminderEmail(user, entry, house)
+2. Wire sendInviteEmail into POST /api/houses/[id]/invites
+3. Twilio SMS: src/lib/sms.js
+   - sendInviteSMS(phone, inviteUrl)
+   - Wire into invite creation when phone provided
+4. Bull queue jobs (needs Redis env var):
+   - src/jobs/rentReminders.js — runs daily, checks dueDate 3 days out
+   - src/jobs/taskNudges.js — runs daily, nudges overdue task assignees
+
+SESSION C — Permission Enforcement (critical for security)
+
+1. Create src/lib/permissions.js — getEffectivePermissions(membershipId)
+2. Wire permission checks into:
+   - POST /api/houses/[id]/threads (thread_create permission)
+   - POST /api/houses/[id]/vault (vault_write permission)
+   - POST /api/houses/[id]/tasks (task_create permission)
+   - POST /api/houses/[id]/grocery (grocery_write — add this permission)
+   - POST /api/houses/[id]/polls (poll_create permission)
+
+SESSION D — Browser Push Notifications (FCM)
+
+1. src/lib/fcm.js — sendPushNotification(userId, title, body)
+2. POST /api/push/subscribe — save FCM token to user
+3. Service worker: public/sw.js for background push
+4. Permission request UI in dashboard layout (after first login)
+
+SESSION E — Stripe Subscription (when ready to monetize)
+Currently free — do this when user base is established
+POST /api/webhooks/stripe
+Plan enforcement in API routes (house count, member count limits)
