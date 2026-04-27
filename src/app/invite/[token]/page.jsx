@@ -82,7 +82,7 @@ export default function InvitePage() {
       <div style={{ marginBottom: 28 }}>
         <Image
           src="/pageIcon.png"
-          alt="Homy"
+          alt="Homify"
           width={72}
           height={72}
           style={{

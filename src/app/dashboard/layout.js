@@ -26,6 +26,7 @@ import {
   BookMarked,
   StickyNote,
   LogOut,
+  BarChart2,
   Menu,
 } from "lucide-react";
 
@@ -39,11 +40,8 @@ const HOUSE_NAV = [
   { href: "/tasks", icon: CheckSquare, label: "Tasks" },
   { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
   { href: "/chat", icon: MessageSquare, label: "Chat" },
-  { href: "/meetings", icon: Video, label: "Meetings" },
-  { href: "/rules", icon: BookMarked, label: "Rules" },
-  { href: "/notes", icon: StickyNote, label: "Notes" },
+  { href: "/polls", icon: BarChart2, label: "Polls" },
   { href: "/members", icon: Users, label: "Members" },
-  { href: "/moveout", icon: LogOut, label: "Move-Out" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -305,7 +303,7 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
         >
           <Image
             src="/favicon.png"
-            alt="Homy"
+            alt="Homify"
             width={24}
             height={24}
             style={{ borderRadius: 5, objectFit: "cover" }}
@@ -318,7 +316,7 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
               color: "var(--text)",
             }}
           >
-            Homy
+            Homify
           </span>
         </Link>
         {isMobile && (
@@ -563,7 +561,7 @@ export default function DashboardLayout({ children }) {
           >
             <Image
               src="/favicon.png"
-              alt="Homy"
+              alt="Homify"
               width={22}
               height={22}
               style={{ borderRadius: 5, objectFit: "cover" }}
@@ -575,7 +573,7 @@ export default function DashboardLayout({ children }) {
                 color: "var(--text)",
               }}
             >
-              Homy
+              Homify
             </span>
           </Link>
         </div>
@@ -654,7 +652,7 @@ export default function DashboardLayout({ children }) {
             >
               <Image
                 src="/favicon.png"
-                alt="Homy"
+                alt="Homify"
                 width={24}
                 height={24}
                 style={{ borderRadius: 5, objectFit: "cover" }}
@@ -667,7 +665,7 @@ export default function DashboardLayout({ children }) {
                   color: "var(--text)",
                 }}
               >
-                Homy
+                Homify
               </span>
             </Link>
           </div>

@@ -578,7 +578,7 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image
               src="/favicon.png"
-              alt="Homy"
+              alt="Homify"
               width={26}
               height={26}
               style={{ borderRadius: 6, objectFit: "cover" }}
@@ -590,7 +590,7 @@ export default function HomePage() {
                 letterSpacing: "-0.03em",
               }}
             >
-              Homy
+              Homify
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -836,7 +836,7 @@ export default function HomePage() {
                 fontWeight: 600,
               }}
             >
-              Homy fixes all of this — quietly, in the background, so you can
+              Homify fixes all of this — quietly, in the background, so you can
               just live.
             </p>
           </div>
@@ -1041,7 +1041,7 @@ export default function HomePage() {
                 lineHeight: 1.7,
               }}
             >
-              Homy is. Set up in 2 minutes. Free forever.
+              Homify is. Set up in 2 minutes. Free forever.
             </p>
             <SignUpButton mode="modal">
               <button
@@ -1081,15 +1081,17 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Image
               src="/favicon.png"
-              alt="Homy"
+              alt="Homify"
               width={18}
               height={18}
               style={{ borderRadius: 4, objectFit: "cover" }}
             />
-            <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>Homy</span>
+            <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>
+              Homify
+            </span>
           </div>
           <p style={{ fontSize: "0.75rem", color: "var(--faint)" }}>
-            © 2025 Homy · Built for Bangladesh & beyond
+            © 2025 Homify · Built for Bangladesh & beyond
           </p>
           <p style={{ fontSize: "0.75rem", color: "var(--faint)" }}>
             No ads. No data selling. Always.

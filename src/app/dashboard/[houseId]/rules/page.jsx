@@ -693,6 +693,8 @@ export default function RulesPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
+            justifyItems: "center",
+
             color: "var(--muted)",
           }}
         >

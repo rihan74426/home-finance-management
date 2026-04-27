@@ -7,7 +7,7 @@ import "server-only";
  */
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.EMAIL_FROM || "Homy <noreply@homy.app>";
+const FROM_EMAIL = process.env.EMAIL_FROM || "Homify <noreply@homify.app>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 async function sendEmail({ to, subject, html, text }) {
@@ -51,7 +51,7 @@ export async function sendInviteEmail({
   inviteUrl,
   expiresAt,
 }) {
-  const subject = `${inviterName} invited you to join ${houseName} on Homy`;
+  const subject = `${inviterName} invited you to join ${houseName} on Homify`;
   const expiry = new Date(expiresAt).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -67,7 +67,7 @@ export async function sendInviteEmail({
     
     <!-- Header -->
     <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;letter-spacing:-0.02em;">🏠 Homy</div>
+      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;letter-spacing:-0.02em;">🏠 Homify</div>
       <div style="font-size:0.8rem;color:#8a8fa8;margin-top:3px;">Your home, finally organized.</div>
     </div>
     
@@ -103,13 +103,13 @@ export async function sendInviteEmail({
     
     <!-- Footer -->
     <div style="padding:16px 32px;border-top:1px solid rgba(255,255,255,0.06);">
-      <p style="color:#4a506a;font-size:0.72rem;margin:0;">© 2025 Homy · No ads. No data selling. Always.</p>
+      <p style="color:#4a506a;font-size:0.72rem;margin:0;">© 2025 Homify · No ads. No data selling. Always.</p>
     </div>
   </div>
 </body>
 </html>`;
 
-  const text = `${inviterName} invited you to join ${houseName} on Homy.\n\nAccept invite: ${inviteUrl}\n\nExpires: ${expiry}`;
+  const text = `${inviterName} invited you to join ${houseName} on Homify.\n\nAccept invite: ${inviteUrl}\n\nExpires: ${expiry}`;
 
   return sendEmail({ to, subject, html, text });
 }
@@ -144,7 +144,7 @@ export async function sendRentReminderEmail({
 <body style="margin:0;padding:0;background:#080c12;font-family:system-ui,-apple-system,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#0e1520;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
     <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homy</div>
+      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homify</div>
     </div>
     <div style="padding:28px 32px;">
       <h1 style="font-size:1.1rem;font-weight:800;color:#fbbf24;margin:0 0 12px;">⚠️ Rent Due Soon</h1>
@@ -164,7 +164,7 @@ export async function sendRentReminderEmail({
       </a>
     </div>
     <div style="padding:16px 32px;border-top:1px solid rgba(255,255,255,0.06);">
-      <p style="color:#4a506a;font-size:0.72rem;margin:0;">© 2025 Homy</p>
+      <p style="color:#4a506a;font-size:0.72rem;margin:0;">© 2025 Homify</p>
     </div>
   </div>
 </body>
@@ -199,7 +199,7 @@ export async function sendRentPaidEmail({
 <body style="margin:0;padding:0;background:#080c12;font-family:system-ui,-apple-system,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#0e1520;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
     <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homy</div>
+      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homify</div>
     </div>
     <div style="padding:28px 32px;">
       <h1 style="font-size:1.1rem;font-weight:800;color:#4ade80;margin:0 0 12px;">✓ Payment Confirmed</h1>
@@ -243,7 +243,7 @@ export async function sendMemberJoinedEmail({
 <body style="margin:0;padding:0;background:#080c12;font-family:system-ui,-apple-system,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#0e1520;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
     <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homy</div>
+      <div style="font-size:1.3rem;font-weight:900;color:#f0ede8;">🏠 Homify</div>
     </div>
     <div style="padding:28px 32px;">
       <p style="color:#8a8fa8;font-size:0.9rem;line-height:1.6;">

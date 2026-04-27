@@ -1257,7 +1257,7 @@ export default function ProfilePage() {
         <div>
           <SectionHeader
             title="Account Preferences"
-            subtitle="Customize your Homy experience"
+            subtitle="Customize your Homify experience"
           />
 
           <div

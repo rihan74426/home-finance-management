@@ -134,7 +134,7 @@ async function handleUserCreated(data) {
     {
       $setOnInsert: {
         clerkId: data.id,
-        email: email ?? `${data.id}@placeholder.homy`,
+        email: email ?? `${data.id}@placeholder.homify`,
         phone: extractPhone(data),
         name: extractName(data),
         avatarUrl: data.image_url ?? null,

@@ -12,10 +12,12 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
 } from "lucide-react";
 import { useUndo } from "@/hooks/useUndo";
+import { GrocerySkeleton } from "@/components/ui/Skeleton";
 
-const GROCERY_POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 5000;
 
 const CATEGORIES = [
   { value: "all", label: "All" },
@@ -95,471 +97,17 @@ const iS = {
   outline: "none",
   boxSizing: "border-box",
 };
+const lS = {
+  display: "block",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  color: "var(--muted)",
+  marginBottom: 5,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
 
-export default function GroceryPage() {
-  const { houseId } = useParams();
-  const { withUndo } = useUndo(5000);
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showBought, setShowBought] = useState(false);
-  const [catFilter, setCatFilter] = useState("all");
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [toggling, setToggling] = useState({});
-  const [form, setForm] = useState({
-    name: "",
-    quantity: "",
-    category: "other",
-    note: "",
-  });
-  const [error, setError] = useState(null);
-  const nameRef = useRef(null);
-  const pollRef = useRef(null);
-  const pendingIds = useRef(new Set());
-  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-  const fetchItems = useCallback(
-    async (showBoughtFlag = false, silent = false) => {
-      try {
-        const res = await fetch(
-          `/api/houses/${houseId}/grocery?showBought=${showBoughtFlag}`
-        );
-        const json = await res.json();
-        if (json.success) {
-          setItems((prev) => {
-            if (pendingIds.current.size === 0) return json.data;
-            const byId = Object.fromEntries(json.data.map((i) => [i._id, i]));
-            return prev
-              .map((item) =>
-                pendingIds.current.has(item._id) ? item : byId[item._id] || item
-              )
-              .concat(
-                json.data.filter((i) => !prev.find((p) => p._id === i._id))
-              );
-          });
-        }
-      } catch {
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [houseId]
-  );
-
-  useEffect(() => {
-    fetchItems(false, false);
-  }, [fetchItems]);
-  useEffect(() => {
-    pollRef.current = setInterval(() => {
-      fetchItems(showBought, true);
-    }, GROCERY_POLL_INTERVAL);
-    return () => clearInterval(pollRef.current);
-  }, [fetchItems, showBought]);
-  useEffect(() => {
-    if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
-  }, [showForm]);
-
-  async function handleAdd(e) {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      setError("Item name required");
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/houses/${houseId}/grocery`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setError(json.error);
-        return;
-      }
-      setItems((p) => [json.data, ...p]);
-      setForm({ name: "", quantity: "", category: "other", note: "" });
-      nameRef.current?.focus();
-      toast.success("Item added.");
-    } catch {
-      setError("Network error.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function toggleBought(item) {
-    const next = !item.isBought;
-    const prevItems = [...items];
-    pendingIds.current.add(item._id);
-    setToggling((p) => ({ ...p, [item._id]: true }));
-
-    withUndo({
-      message: next
-        ? `"${item.name}" marked as bought`
-        : `"${item.name}" unmarked`,
-      optimisticUpdate: () =>
-        setItems((p) =>
-          p.map((i) => (i._id === item._id ? { ...i, isBought: next } : i))
-        ),
-      revert: () => {
-        setItems(prevItems);
-        pendingIds.current.delete(item._id);
-        setToggling((p) => ({ ...p, [item._id]: false }));
-      },
-      apiCall: async () => {
-        const res = await fetch(`/api/grocery/${item._id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isBought: next }),
-        });
-        if (!res.ok) throw new Error();
-      },
-      onSuccess: () => {
-        pendingIds.current.delete(item._id);
-        setToggling((p) => ({ ...p, [item._id]: false }));
-      },
-      onError: () => {
-        pendingIds.current.delete(item._id);
-        setToggling((p) => ({ ...p, [item._id]: false }));
-      },
-    });
-  }
-
-  function handleDelete(id) {
-    const prevItems = [...items];
-    const item = items.find((i) => i._id === id);
-
-    withUndo({
-      message: `"${item?.name || "Item"}" removed from list`,
-      optimisticUpdate: () => setItems((p) => p.filter((i) => i._id !== id)),
-      revert: () => setItems(prevItems),
-      apiCall: () => fetch(`/api/grocery/${id}`, { method: "DELETE" }),
-    });
-  }
-
-  async function handleToggleShowBought() {
-    const next = !showBought;
-    setShowBought(next);
-    setLoading(true);
-    await fetchItems(next, false);
-  }
-
-  const active = items.filter((i) => !i.isBought);
-  const bought = items.filter((i) => i.isBought);
-  const applyFilter = (list) =>
-    catFilter === "all" ? list : list.filter((i) => i.category === catFilter);
-
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading grocery list…
-      </div>
-    );
-
-  return (
-    <div style={{ maxWidth: 640 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 4,
-            }}
-          >
-            <ShoppingCart size={20} color="var(--accent)" />
-            <h1
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Grocery List
-            </h1>
-          </div>
-          <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-            {active.length} item{active.length !== 1 ? "s" : ""} to get
-            {bought.length > 0 ? ` · ${bought.length} bought` : ""}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "9px 18px",
-            borderRadius: 50,
-            background: showForm ? "var(--glass-bg-mid)" : "var(--accent)",
-            color: showForm ? "var(--muted)" : "#fff",
-            fontWeight: 600,
-            fontSize: "0.825rem",
-            border: showForm ? "1px solid var(--glass-border)" : "none",
-            cursor: "pointer",
-          }}
-        >
-          {showForm ? (
-            <>
-              <X size={14} /> Cancel
-            </>
-          ) : (
-            <>
-              <Plus size={14} /> Add item
-            </>
-          )}
-        </button>
-      </div>
-
-      {showForm && (
-        <div
-          style={{
-            background: "var(--glass-bg)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 20,
-          }}
-        >
-          {error && (
-            <div
-              style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.2)",
-                borderRadius: 8,
-                padding: "8px 12px",
-                color: "#f87171",
-                fontSize: "0.8rem",
-                marginBottom: 12,
-              }}
-            >
-              {error}
-            </div>
-          )}
-          <form onSubmit={handleAdd}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 90px",
-                gap: 8,
-                marginBottom: 8,
-              }}
-            >
-              <input
-                ref={nameRef}
-                style={iS}
-                placeholder="Item name"
-                value={form.name}
-                onChange={(e) => setF("name", e.target.value)}
-                maxLength={100}
-              />
-              <input
-                style={iS}
-                placeholder="Qty"
-                value={form.quantity}
-                onChange={(e) => setF("quantity", e.target.value)}
-                maxLength={50}
-              />
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                marginBottom: 10,
-              }}
-            >
-              <select
-                style={{ ...iS, cursor: "pointer" }}
-                value={form.category}
-                onChange={(e) => setF("category", e.target.value)}
-              >
-                {CATEGORIES.filter((c) => c.value !== "all").map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                style={iS}
-                placeholder="Note (optional)"
-                value={form.note}
-                onChange={(e) => setF("note", e.target.value)}
-                maxLength={200}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: 10,
-                background: submitting
-                  ? "var(--glass-bg-mid)"
-                  : "var(--accent)",
-                color: submitting ? "var(--muted)" : "#fff",
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                border: "none",
-                cursor: submitting ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-              }}
-            >
-              {submitting ? (
-                <>
-                  <Loader2
-                    size={14}
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />{" "}
-                  Adding…
-                </>
-              ) : (
-                "Add to list"
-              )}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Category filter pills */}
-      <div
-        style={{
-          display: "flex",
-          gap: 6,
-          flexWrap: "nowrap",
-          overflowX: "auto",
-          marginBottom: 18,
-          paddingBottom: 4,
-          scrollbarWidth: "none",
-        }}
-      >
-        {CATEGORIES.map((c) => {
-          const on = catFilter === c.value;
-          return (
-            <button
-              key={c.value}
-              onClick={() => setCatFilter(c.value)}
-              style={{
-                padding: "4px 13px",
-                borderRadius: 50,
-                fontSize: "0.76rem",
-                fontWeight: 600,
-                border: "1px solid",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                borderColor: on ? "var(--accent)" : "var(--glass-border)",
-                background: on ? "var(--accent-dim)" : "transparent",
-                color: on ? "var(--accent)" : "var(--muted)",
-              }}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {active.length === 0 && bought.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 0",
-            color: "var(--muted)",
-          }}
-        >
-          <ShoppingCart size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p style={{ marginBottom: 6 }}>Your list is empty.</p>
-          <p style={{ fontSize: "0.82rem" }}>Add something to get started.</p>
-        </div>
-      ) : (
-        <>
-          {applyFilter(active).length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 5,
-                marginBottom: 16,
-              }}
-            >
-              {applyFilter(active).map((item) => (
-                <GroceryRow
-                  key={item._id}
-                  item={item}
-                  toggling={toggling[item._id]}
-                  onToggle={() => toggleBought(item)}
-                  onDelete={() => handleDelete(item._id)}
-                />
-              ))}
-            </div>
-          )}
-          {bought.length > 0 && (
-            <div>
-              <button
-                onClick={handleToggleShowBought}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  padding: "6px 0",
-                  marginBottom: showBought ? 10 : 0,
-                }}
-              >
-                {showBought ? (
-                  <ChevronUp size={14} />
-                ) : (
-                  <ChevronDown size={14} />
-                )}
-                {bought.length} bought
-              </button>
-              {showBought && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 5,
-                    opacity: 0.6,
-                  }}
-                >
-                  {applyFilter(bought).map((item) => (
-                    <GroceryRow
-                      key={item._id}
-                      item={item}
-                      toggling={toggling[item._id]}
-                      onToggle={() => toggleBought(item)}
-                      onDelete={() => handleDelete(item._id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8} .filter-scroll::-webkit-scrollbar{display:none}`}</style>
-    </div>
-  );
-}
-
+// ── Single grocery row ────────────────────────────────────────────────────────
 function GroceryRow({ item, toggling, onToggle, onDelete }) {
   const cat = CAT_COLORS[item.category] || CAT_COLORS.other;
   const done = item.isBought;
@@ -699,6 +247,499 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
       >
         <Trash2 size={13} />
       </button>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function GroceryPage() {
+  const { houseId } = useParams();
+  const { withUndo } = useUndo(5000);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showBought, setShowBought] = useState(false);
+  const [catFilter, setCatFilter] = useState("all");
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toggling, setToggling] = useState({});
+  const [liveIndicator, setLiveIndicator] = useState(false); // flash when new items arrive
+  const [form, setForm] = useState({
+    name: "",
+    quantity: "",
+    category: "other",
+    note: "",
+  });
+  const nameRef = useRef(null);
+  const pollRef = useRef(null);
+  const pendingOps = useRef(new Set()); // item IDs with in-flight optimistic changes
+  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  // ── Fetch items ──────────────────────────────────────────────────────────────
+  const fetchItems = useCallback(
+    async (showBoughtFlag, silent = false) => {
+      try {
+        const res = await fetch(
+          `/api/houses/${houseId}/grocery?showBought=${showBoughtFlag}`
+        );
+        const json = await res.json();
+        if (!json.success) return;
+
+        setItems((prev) => {
+          // Don't override items that have pending optimistic operations
+          if (pendingOps.current.size === 0) {
+            // Flash indicator if new items arrived silently
+            if (silent && json.data.length > prev.length) {
+              setLiveIndicator(true);
+              setTimeout(() => setLiveIndicator(false), 1200);
+            }
+            return json.data;
+          }
+          // Merge: keep optimistic state for pending items, update rest
+          const serverMap = Object.fromEntries(
+            json.data.map((i) => [String(i._id), i])
+          );
+          const merged = prev.map((item) =>
+            pendingOps.current.has(String(item._id))
+              ? item
+              : serverMap[String(item._id)] || item
+          );
+          // Add brand-new items from server that aren't in prev
+          const prevIds = new Set(prev.map((i) => String(i._id)));
+          const newItems = json.data.filter((i) => !prevIds.has(String(i._id)));
+          if (newItems.length > 0 && silent) {
+            setLiveIndicator(true);
+            setTimeout(() => setLiveIndicator(false), 1200);
+          }
+          return [...merged, ...newItems];
+        });
+      } catch {
+        /* silent fail — don't disrupt UI */
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [houseId]
+  );
+
+  // Initial load
+  useEffect(() => {
+    fetchItems(false, false);
+  }, [fetchItems]);
+
+  // Real-time polling
+  useEffect(() => {
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(
+      () => fetchItems(showBought, true),
+      POLL_INTERVAL
+    );
+    return () => clearInterval(pollRef.current);
+  }, [fetchItems, showBought]);
+
+  // Focus name input when form opens
+  useEffect(() => {
+    if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
+  }, [showForm]);
+
+  // ── Add item ──────────────────────────────────────────────────────────────
+  async function handleAdd(e) {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error("Item name is required.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/houses/${houseId}/grocery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error);
+        return;
+      }
+      setItems((p) => [json.data, ...p]);
+      setForm({ name: "", quantity: "", category: "other", note: "" });
+      nameRef.current?.focus();
+      toast.success("Item added.");
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── Toggle bought ────────────────────────────────────────────────────────
+  function toggleBought(item) {
+    const next = !item.isBought;
+    const prevItems = [...items];
+    const id = String(item._id);
+
+    pendingOps.current.add(id);
+    setToggling((p) => ({ ...p, [id]: true }));
+
+    withUndo({
+      message: next
+        ? `"${item.name}" marked as bought`
+        : `"${item.name}" unmarked`,
+      optimisticUpdate: () =>
+        setItems((p) =>
+          p.map((i) => (String(i._id) === id ? { ...i, isBought: next } : i))
+        ),
+      revert: () => {
+        setItems(prevItems);
+        pendingOps.current.delete(id);
+        setToggling((p) => ({ ...p, [id]: false }));
+      },
+      apiCall: async () => {
+        const res = await fetch(`/api/grocery/${item._id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isBought: next }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+      },
+      onSuccess: () => {
+        pendingOps.current.delete(id);
+        setToggling((p) => ({ ...p, [id]: false }));
+      },
+      onError: () => {
+        pendingOps.current.delete(id);
+        setToggling((p) => ({ ...p, [id]: false }));
+      },
+    });
+  }
+
+  // ── Delete item ──────────────────────────────────────────────────────────
+  function handleDelete(id) {
+    const prevItems = [...items];
+    const item = items.find((i) => String(i._id) === String(id));
+    withUndo({
+      message: `"${item?.name || "Item"}" removed`,
+      optimisticUpdate: () =>
+        setItems((p) => p.filter((i) => String(i._id) !== String(id))),
+      revert: () => setItems(prevItems),
+      apiCall: () => fetch(`/api/grocery/${id}`, { method: "DELETE" }),
+    });
+  }
+
+  async function toggleShowBought() {
+    const next = !showBought;
+    setShowBought(next);
+    await fetchItems(next, false);
+  }
+
+  const active = items.filter((i) => !i.isBought);
+  const bought = items.filter((i) => i.isBought);
+  const applyFilter = (list) =>
+    catFilter === "all" ? list : list.filter((i) => i.category === catFilter);
+  const visibleActive = applyFilter(active);
+  const visibleBought = applyFilter(bought);
+
+  if (loading) return <GrocerySkeleton />;
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 24,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 4,
+            }}
+          >
+            <ShoppingCart size={20} color="var(--accent)" />
+            <h1
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Grocery List
+            </h1>
+            {/* Live pulse */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: liveIndicator ? "#4ade80" : "var(--faint)",
+                  transition: "background 0.3s",
+                }}
+              />
+              <span style={{ fontSize: "0.68rem", color: "var(--faint)" }}>
+                Live
+              </span>
+            </div>
+          </div>
+          <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+            {active.length} item{active.length !== 1 ? "s" : ""} to get
+            {bought.length > 0 ? ` · ${bought.length} bought` : ""}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 18px",
+            borderRadius: 50,
+            background: showForm ? "var(--glass-bg-mid)" : "var(--accent)",
+            color: showForm ? "var(--muted)" : "#fff",
+            fontWeight: 600,
+            fontSize: "0.825rem",
+            border: showForm ? "1px solid var(--glass-border)" : "none",
+            cursor: "pointer",
+          }}
+        >
+          {showForm ? (
+            <>
+              <X size={14} /> Cancel
+            </>
+          ) : (
+            <>
+              <Plus size={14} /> Add item
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Add form */}
+      {showForm && (
+        <div
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+            borderRadius: 14,
+            padding: 18,
+            marginBottom: 20,
+          }}
+        >
+          <form onSubmit={handleAdd}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 90px",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <input
+                ref={nameRef}
+                style={iS}
+                placeholder="Item name"
+                value={form.name}
+                onChange={(e) => setF("name", e.target.value)}
+                maxLength={100}
+              />
+              <input
+                style={iS}
+                placeholder="Qty"
+                value={form.quantity}
+                onChange={(e) => setF("quantity", e.target.value)}
+                maxLength={50}
+              />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <select
+                style={{ ...iS, cursor: "pointer" }}
+                value={form.category}
+                onChange={(e) => setF("category", e.target.value)}
+              >
+                {CATEGORIES.filter((c) => c.value !== "all").map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                style={iS}
+                placeholder="Note (optional)"
+                value={form.note}
+                onChange={(e) => setF("note", e.target.value)}
+                maxLength={200}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: 10,
+                background: submitting
+                  ? "var(--glass-bg-mid)"
+                  : "var(--accent)",
+                color: submitting ? "var(--muted)" : "#fff",
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                border: "none",
+                cursor: submitting ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+              }}
+            >
+              {submitting ? (
+                <>
+                  <Loader2
+                    size={14}
+                    style={{ animation: "spin 1s linear infinite" }}
+                  />{" "}
+                  Adding…
+                </>
+              ) : (
+                "Add to list"
+              )}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Category filter pills */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          flexWrap: "nowrap",
+          overflowX: "auto",
+          marginBottom: 18,
+          paddingBottom: 4,
+          scrollbarWidth: "none",
+        }}
+      >
+        {CATEGORIES.map((c) => {
+          const on = catFilter === c.value;
+          return (
+            <button
+              key={c.value}
+              onClick={() => setCatFilter(c.value)}
+              style={{
+                padding: "4px 13px",
+                borderRadius: 50,
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                border: "1px solid",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                borderColor: on ? "var(--accent)" : "var(--glass-border)",
+                background: on ? "var(--accent-dim)" : "transparent",
+                color: on ? "var(--accent)" : "var(--muted)",
+              }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Empty state */}
+      {active.length === 0 && bought.length === 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 0",
+            color: "var(--muted)",
+          }}
+        >
+          <ShoppingCart size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <p style={{ marginBottom: 4 }}>Your list is empty.</p>
+          <p style={{ fontSize: "0.82rem" }}>Add something to get started.</p>
+        </div>
+      )}
+
+      {/* Active items */}
+      {visibleActive.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 5,
+            marginBottom: 16,
+          }}
+        >
+          {visibleActive.map((item) => (
+            <GroceryRow
+              key={item._id}
+              item={item}
+              toggling={toggling[String(item._id)]}
+              onToggle={() => toggleBought(item)}
+              onDelete={() => handleDelete(item._id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Bought section */}
+      {bought.length > 0 && (
+        <div>
+          <button
+            onClick={toggleShowBought}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              padding: "6px 0",
+              marginBottom: showBought ? 10 : 0,
+            }}
+          >
+            {showBought ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {bought.length} bought item{bought.length !== 1 ? "s" : ""}
+          </button>
+          {showBought && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+                opacity: 0.6,
+              }}
+            >
+              {visibleBought.map((item) => (
+                <GroceryRow
+                  key={item._id}
+                  item={item}
+                  toggling={toggling[String(item._id)]}
+                  onToggle={() => toggleBought(item)}
+                  onDelete={() => handleDelete(item._id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8} ::-webkit-scrollbar{display:none}`}</style>
     </div>
   );
 }

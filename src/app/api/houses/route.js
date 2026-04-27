@@ -24,7 +24,7 @@ export async function GET() {
     const email =
       clerkUser.emailAddresses.find(
         (e) => e.id === clerkUser.primaryEmailAddressId
-      )?.emailAddress ?? `${clerkId}@placeholder.homy`;
+      )?.emailAddress ?? `${clerkId}@placeholder.homify`;
     user = await User.create({
       clerkId,
       email,

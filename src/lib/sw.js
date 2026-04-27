@@ -1,8 +1,8 @@
-// public/sw.js — Service Worker for Homy push notifications
+// public/sw.js — Service Worker for Homify push notifications
 // This file must be at /public/sw.js to be served from the root
 
 const APP_URL = self.location.origin;
-const CACHE_NAME = "homy-v1";
+const CACHE_NAME = "homify-v1";
 
 // Install event — cache critical assets
 self.addEventListener("install", (event) => {
@@ -22,11 +22,11 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "Homy", body: event.data.text() };
+    data = { title: "Homify", body: event.data.text() };
   }
 
   const {
-    title = "Homy",
+    title = "Homify",
     body = "",
     icon = "/favicon.png",
     badge = "/favicon.png",

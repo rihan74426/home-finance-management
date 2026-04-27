@@ -1026,6 +1026,8 @@ export default function MeetingsPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
+            justifyItems: "center",
+
             color: "var(--muted)",
           }}
         >

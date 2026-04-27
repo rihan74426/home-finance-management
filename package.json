@@ -1,8 +1,8 @@
 {
-  "name": "homy-web",
+  "name": "homify-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Homy — your home, finally organized.",
+  "description": "Homify — your home, finally organized.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

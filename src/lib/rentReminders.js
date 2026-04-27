@@ -117,7 +117,7 @@ export async function runRentReminders() {
 
     // Email
     const email = member.email;
-    if (email && !email.includes("placeholder.homy")) {
+    if (email && !email.includes("placeholder.homify")) {
       const emailFn = isOverdue ? sendRentOverdueEmail : sendRentReminderEmail;
       // sendRentOverdueEmail may not exist, fall back gracefully
       if (emailFn) {

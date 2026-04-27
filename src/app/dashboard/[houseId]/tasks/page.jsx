@@ -198,6 +198,7 @@ export default function TasksPage() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyItems: "center",
               gap: 10,
               marginBottom: 4,
             }}
@@ -451,6 +452,8 @@ export default function TasksPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
+            justifyItems: "center",
+
             color: "var(--muted)",
           }}
         >

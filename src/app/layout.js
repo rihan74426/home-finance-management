@@ -14,16 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Homy — Your home, finally organized.",
+  title: "Homify — Your home, finally organized.",
   description:
-    "Homy is the household operating system for shared homes. Manage rent, bills, tasks, groceries, and more.",
+    "Homify is the household operating system for shared homes. Manage rent, bills, tasks, groceries, and more.",
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
     shortcut: "/favicon.png",
     apple: "/pageIcon.png",
   },
   openGraph: {
-    title: "Homy — Your home, finally organized.",
+    title: "Homify — Your home, finally organized.",
     description: "Manage rent, bills, tasks, groceries, and more.",
     images: ["/pageIcon.png"],
   },

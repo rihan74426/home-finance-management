@@ -52,7 +52,7 @@ async function sendSMS({ to, body }) {
 // ── SMS templates ────────────────────────────────────────────────────────────
 
 export async function sendInviteSMS({ to, inviterName, houseName, inviteUrl }) {
-  const body = `${inviterName} invited you to join ${houseName} on Homy.\n\nAccept: ${inviteUrl}\n\nExpires in 7 days.`;
+  const body = `${inviterName} invited you to join ${houseName} on Homify.\n\nAccept: ${inviteUrl}\n\nExpires in 7 days.`;
   return sendSMS({ to, body });
 }
 
@@ -76,7 +76,7 @@ export async function sendRentReminderSMS({
       }).format(amountDue / 100)
     : null;
 
-  const body = `Homy reminder: ${name ? `Hi ${name}, y` : "Y"}our rent for ${houseName} is due on ${dueDateStr}.${amount ? ` Amount: ${amount}.` : ""}\n\nView: ${APP_URL}/dashboard`;
+  const body = `Homify reminder: ${name ? `Hi ${name}, y` : "Y"}our rent for ${houseName} is due on ${dueDateStr}.${amount ? ` Amount: ${amount}.` : ""}\n\nView: ${APP_URL}/dashboard`;
   return sendSMS({ to, body });
 }
 
@@ -95,11 +95,11 @@ export async function sendRentOverdueSMS({
       }).format(amountDue / 100)
     : null;
 
-  const body = `Homy: ${name ? `Hi ${name}, y` : "Y"}our rent for ${houseName} is overdue.${amount ? ` Amount: ${amount}.` : ""} Please pay as soon as possible.\n\n${APP_URL}/dashboard`;
+  const body = `Homify: ${name ? `Hi ${name}, y` : "Y"}our rent for ${houseName} is overdue.${amount ? ` Amount: ${amount}.` : ""} Please pay as soon as possible.\n\n${APP_URL}/dashboard`;
   return sendSMS({ to, body });
 }
 
 export async function sendMemberJoinedSMS({ to, newMemberName, houseName }) {
-  const body = `Homy: ${newMemberName} just joined ${houseName}. View members: ${APP_URL}/dashboard`;
+  const body = `Homify: ${newMemberName} just joined ${houseName}. View members: ${APP_URL}/dashboard`;
   return sendSMS({ to, body });
 }
