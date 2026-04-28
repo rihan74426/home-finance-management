@@ -25,7 +25,7 @@ import User from "@/models/User";
 import House from "@/models/House";
 import Notification from "@/models/Notification";
 import { PAYMENT_STATUS, NOTIFICATION_TYPE } from "@/lib/constants";
-import { sendRentReminderEmail, sendRentOverdueEmail } from "@/lib/email";
+import { sendRentReminderEmail } from "@/lib/email";
 import { sendRentReminderSMS, sendRentOverdueSMS } from "@/lib/sms";
 
 export async function runRentReminders() {
@@ -118,7 +118,7 @@ export async function runRentReminders() {
     // Email
     const email = member.email;
     if (email && !email.includes("placeholder.homify")) {
-      const emailFn = isOverdue ? sendRentOverdueEmail : sendRentReminderEmail;
+      const emailFn = sendRentReminderEmail;
       // sendRentOverdueEmail may not exist, fall back gracefully
       if (emailFn) {
         emailFn({

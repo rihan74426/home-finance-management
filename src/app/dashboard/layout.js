@@ -41,6 +41,8 @@ const HOUSE_NAV = [
   { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
   { href: "/chat", icon: MessageSquare, label: "Chat" },
   { href: "/polls", icon: BarChart2, label: "Polls" },
+  { href: "/meetings", icon: Video, label: "Meetings" },
+  { href: "/rules", icon: StickyNote, label: "Rules & Notes" },
   { href: "/members", icon: Users, label: "Members" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
