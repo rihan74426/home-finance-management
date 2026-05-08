@@ -4,7 +4,8 @@ import User from "@/models/User";
 import Membership from "@/models/Membership";
 import MemberDocument from "@/models/MemberDocument";
 
-// POST /api/memberships/[membershipId]/documents/[docId] — toggle verification (manager only)
+// POST /api/memberships/[membershipId]/documents/[docId]
+// Toggles verification — manager only
 export async function POST(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
@@ -67,7 +68,8 @@ export async function POST(req, { params }) {
   return Response.json({ success: true, data: doc });
 }
 
-// DELETE /api/memberships/[membershipId]/documents/[docId] — delete document
+// DELETE /api/memberships/[membershipId]/documents/[docId]
+// Owner or manager can delete
 export async function DELETE(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
@@ -105,5 +107,6 @@ export async function DELETE(req, { params }) {
   await MemberDocument.findByIdAndUpdate(docId, {
     $set: { deletedAt: new Date() },
   });
+
   return Response.json({ success: true });
 }

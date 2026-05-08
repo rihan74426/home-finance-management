@@ -1,233 +1,317 @@
 # CLAUDE.md — HOMY SESSION MEMORY
 
-> Read this file first at the start of every session.
-> Update the "Last Session" section before ending every session.
+> Read this file at the start of every session.
+> Update "Last Session" before ending every session.
 
 ---
 
 ## PROJECT IDENTITY
 
 - **Product:** Homy — "Your home, finally organized"
-- **Type:** Household management SaaS (web + mobile)
+- **Type:** Household management SaaS
 - **Stack:** Next.js 14 App Router, JavaScript, MongoDB/Mongoose, Clerk auth, Tailwind CSS
 - **Target:** Shared households — flatmates, families, co-living — South/Southeast Asia first
-- **Stage:** Phase 1 complete → Phase 2
+- **Stage:** Phase 1 feature-complete. Phase 2 = monetization + mobile.
 
 ---
 
-## WHAT IS BUILT (AS OF LATEST SESSION)
+## COMPLETE FILE INVENTORY
 
-### API Routes — ALL WORKING
+### Models (`src/models/`)
 
-```
-POST /api/webhooks/clerk            ✅ User sync
-GET  /api/houses                    ✅ List user's houses
-POST /api/houses                    ✅ Create house + membership + General thread
-GET  /api/houses/[id]               ✅ Get house details + role
-PATCH /api/houses/[id]              ✅ Update settings (manager only)
-GET  /api/houses/[id]/members       ✅ Role-filtered member list
-POST /api/houses/[id]/invites       ✅ Create invite link
-GET  /api/houses/[id]/invites       ✅ List pending invites
-GET  /api/invites/[token]           ✅ Public — look up invite
-POST /api/invites/[token]           ✅ Accept invite + notify manager
-GET  /api/houses/[id]/ledger        ✅ Entries (manager=all, member=own)
-POST /api/houses/[id]/ledger        ✅ Log payment + notify member
-GET  /api/houses/[id]/ledger/export ✅ PDF export (per member or full)
-GET  /api/houses/[id]/vault         ✅ Vault items (filtered + decrypted)
-POST /api/houses/[id]/vault         ✅ Add vault item (AES-256 encrypted)
-PATCH /api/vault/[itemId]           ✅ Update vault item
-DELETE /api/vault/[itemId]          ✅ Delete vault item
-GET  /api/houses/[id]/tasks         ✅ List tasks
-POST /api/houses/[id]/tasks         ✅ Create task + notify assignee
-PATCH /api/tasks/[taskId]           ✅ Update task (complete, edit, reassign)
-DELETE /api/tasks/[taskId]          ✅ Delete task (creator or manager)
-GET  /api/houses/[id]/grocery       ✅ List grocery items
-POST /api/houses/[id]/grocery       ✅ Add grocery item
-PATCH /api/grocery/[itemId]         ✅ Mark bought / update
-DELETE /api/grocery/[itemId]        ✅ Delete grocery item
-GET  /api/houses/[id]/threads       ✅ List chat threads
-POST /api/houses/[id]/threads       ✅ Create thread
-GET  /api/threads/[id]/messages     ✅ Get messages (paginated + polling)
-POST /api/threads/[id]/messages     ✅ Send message
-GET  /api/houses/[id]/bills         ✅ List bills
-POST /api/houses/[id]/bills         ✅ Create bill (manager only)
-POST /api/bills/[billId]/split      ✅ Split bill (equal or custom)
-GET  /api/bills/[billId]/split      ✅ Get split details
-GET  /api/houses/[id]/polls         ✅ List polls with results + myVote
-POST /api/houses/[id]/polls         ✅ Create poll
-POST /api/polls/[pollId]/vote       ✅ Cast / toggle vote
-GET  /api/notifications             ✅ List notifications + unreadCount
-PATCH /api/notifications            ✅ Mark read (all or specific ids)
-GET  /api/memberships/[id]/documents      ✅ List member documents
-POST /api/memberships/[id]/documents      ✅ Upload document (member only)
-POST /api/memberships/[id]/documents/[docId]   ✅ Toggle verify (manager only)
-DELETE /api/memberships/[id]/documents/[docId] ✅ Delete document
-```
+| File                  | Key exports                | Notes                                  |
+| --------------------- | -------------------------- | -------------------------------------- |
+| `User.js`             | default User               | Has `fcmTokens` array for push         |
+| `House.js`            | default House              | Root entity                            |
+| `Membership.js`       | default Membership         | `.isManager()` + `.isMember()` statics |
+| `Ledgerentry.js`      | default LedgerEntry        | `.forMember()` strips managerNote      |
+| `Bills.js`            | `{ Bill, BillSplit }`      | Named exports                          |
+| `VaultItem.js`        | default VaultItem          | AES-256-GCM encryption helpers         |
+| `Task.js`             | default Task               | Recurring tasks                        |
+| `Grocery.js`          | default GroceryItem        |                                        |
+| `Thread.js`           | `{ Thread, Message }`      | Named exports                          |
+| `Polls.js`            | default Poll               | Votes embedded                         |
+| `Invite.js`           | default Invite             | `.generateToken()`, `.createInvite()`  |
+| `Notification.js`     | default Notification       |                                        |
+| `MemberDocument.js`   | default MemberDocument     |                                        |
+| `MoveOutChecklist.js` | default MoveOutChecklist   | `.defaultItems()` static               |
+| `HouseRule.js`        | `{ HouseRule, RuleAlert }` | Named exports                          |
+| `ManagerNote.js`      | default ManagerNote        | Private + shared notes                 |
+| `Meeting.js`          | default Meeting            | RSVP embedded                          |
+| `MemberPermission.js` | default MemberPermission   | `PERMISSIONS`, `ROLE_DEFAULTS` exports |
 
-### Dashboard Pages — ALL WORKING
+### API Routes — Complete Map
 
 ```
-/dashboard                          ✅ House list + empty state
-/dashboard/create-house             ✅ Create house form
-/dashboard/[houseId]                ✅ House overview with live stats
-/dashboard/[houseId]/ledger         ✅ Rent ledger + PDF export
-/dashboard/[houseId]/vault          ✅ Encrypted vault (grouped, reveal/copy)
-/dashboard/[houseId]/tasks          ✅ Task board (filter, complete, delete)
-/dashboard/[houseId]/grocery        ✅ Grocery list (categories, bought toggle)
-/dashboard/[houseId]/chat           ✅ Chat (threads, polls, 3s polling)
-/dashboard/[houseId]/members        ✅ Member list + invite modal + docs panel
-/dashboard/[houseId]/bills          ✅ Bills + split modal
-/dashboard/[houseId]/settings       ✅ House settings (manager only)
-/invite/[token]                     ✅ Invite acceptance page
+PUBLIC:
+  GET  /api/invites/[token]                                  look up invite
+  POST /api/webhooks/clerk                                   user sync
+
+HOUSES:
+  GET  /api/houses                                           list user's houses
+  POST /api/houses                                           create house
+  GET  /api/houses/[id]                                      house detail + role
+  PATCH /api/houses/[id]                                     update (manager)
+  DELETE /api/houses/[id]                                    soft delete (manager)
+
+MEMBERS:
+  GET  /api/houses/[id]/members                              list (role-filtered)
+  PATCH /api/houses/[id]/members/[membershipId]/role         change role (manager)
+  DELETE /api/houses/[id]/members/[membershipId]             remove / leave
+  GET  /api/houses/[id]/members/[membershipId]/permissions   effective permissions
+  PATCH /api/houses/[id]/members/[membershipId]/permissions  set overrides (manager)
+  DELETE /api/houses/[id]/members/[membershipId]/permissions reset overrides
+  POST /api/houses/[id]/transfer                             ownership transfer
+
+INVITES:
+  POST /api/houses/[id]/invites                              create invite + email/SMS
+  GET  /api/houses/[id]/invites                              list pending (manager)
+  POST /api/invites/[token]                                  accept invite
+
+LEDGER:
+  GET  /api/houses/[id]/ledger                               entries (manager=all, member=own)
+  POST /api/houses/[id]/ledger                               log payment (manager)
+  GET  /api/houses/[id]/ledger/export                        PDF export
+
+BILLS:
+  GET  /api/houses/[id]/bills                                list
+  POST /api/houses/[id]/bills                                create (manager)
+  PATCH /api/bills/[billId]                                  update details (manager)
+  DELETE /api/bills/[billId]                                 delete unsplit bill (manager)
+  POST /api/bills/[billId]/split                             split (manager)
+  GET  /api/bills/[billId]/split                             split details
+  PATCH /api/bills/[billId]/splits/[splitId]                 mark share paid (manager)
+
+VAULT:
+  GET  /api/houses/[id]/vault                                list (visibility-filtered, decrypted)
+  POST /api/houses/[id]/vault                                add (encrypted)
+  PATCH /api/vault/[itemId]                                  update
+  DELETE /api/vault/[itemId]                                 delete
+
+TASKS:
+  GET  /api/houses/[id]/tasks                                list
+  POST /api/houses/[id]/tasks                                create
+  PATCH /api/tasks/[taskId]                                  update / complete
+  DELETE /api/tasks/[taskId]                                 delete
+
+GROCERY:
+  GET  /api/houses/[id]/grocery                              list
+  POST /api/houses/[id]/grocery                              add
+  PATCH /api/grocery/[itemId]                                mark bought / update
+  DELETE /api/grocery/[itemId]                               delete
+
+CHAT:
+  GET  /api/houses/[id]/threads                              list threads
+  POST /api/houses/[id]/threads                              create thread
+  GET  /api/threads/[threadId]/messages                      messages (paginated + poll)
+  POST /api/threads/[threadId]/messages                      send message
+
+POLLS:
+  GET  /api/houses/[id]/polls                                list with results + myVote
+  POST /api/houses/[id]/polls                                create
+  POST /api/polls/[pollId]/vote                              cast / toggle vote
+  DELETE /api/polls/[pollId]/vote                            close poll (manager)
+
+NOTIFICATIONS:
+  GET  /api/notifications                                    list + unreadCount
+  PATCH /api/notifications                                   mark read
+
+DOCUMENTS:
+  GET  /api/memberships/[membershipId]/documents             list
+  POST /api/memberships/[membershipId]/documents             upload (member only)
+  POST /api/memberships/[membershipId]/documents/[docId]     toggle verify (manager)
+  DELETE /api/memberships/[membershipId]/documents/[docId]   delete (owner or manager)
+
+RULES:
+  GET  /api/houses/[id]/rules                                list rules + open alerts (manager)
+  POST /api/houses/[id]/rules                                create rule (manager)
+  PATCH /api/rules/[ruleId]                                  update rule (manager)
+  DELETE /api/rules/[ruleId]                                 deactivate rule (manager)
+  POST /api/rules/[ruleId]/alerts                            report violation (any member)
+  PATCH /api/rules/[ruleId]/alerts/[alertId]                 resolve/dismiss (manager)
+
+NOTES:
+  GET  /api/houses/[id]/notes                                list (manager=all, member=shared)
+  POST /api/houses/[id]/notes                                create (manager)
+  PATCH /api/houses/[id]/notes/[noteId]                      update (manager)
+  DELETE /api/notes/[noteId]                                 delete (manager)
+
+MEETINGS:
+  GET  /api/houses/[id]/meetings                             list upcoming/past
+  POST /api/houses/[id]/meetings                             schedule + notify
+  PATCH /api/meetings/[meetingId]                            rsvp / cancel / update
+  GET  /api/meetings/[meetingId]                             single meeting detail
+
+MOVE-OUT:
+  GET  /api/houses/[id]/moveout                              get checklist(s)
+  POST /api/houses/[id]/moveout                              initiate (member)
+  PATCH /api/houses/[id]/moveout                             update_item/submit/approve/reject
+
+PUSH:
+  POST /api/push/subscribe                                   save FCM token
+  DELETE /api/push/subscribe                                 remove FCM token
+
+CRON:
+  GET  /api/cron/rent-reminders                              daily reminders (CRON_SECRET)
 ```
 
-### Models — ALL DEFINED
+### Dashboard Pages
 
 ```
-User, House, Membership, LedgerEntry, Bill, BillSplit,
-VaultItem, Task, GroceryItem, Thread (+Message), Poll,
-Invite, Notification, MemberDocument
+/dashboard                           house list
+/dashboard/profile                   user profile + activity
+/dashboard/create-house              create house form
+/dashboard/[houseId]                 house overview (live stats)
+/dashboard/[houseId]/ledger          rent ledger + PDF export
+/dashboard/[houseId]/bills           bills + split
+/dashboard/[houseId]/vault           encrypted vault
+/dashboard/[houseId]/tasks           task board
+/dashboard/[houseId]/grocery         grocery list (real-time polling)
+/dashboard/[houseId]/chat            threaded chat + polls + 3s polling
+/dashboard/[houseId]/polls           standalone polls page
+/dashboard/[houseId]/members         member list + invite + documents
+/dashboard/[houseId]/rules           house rules + violation alerts
+/dashboard/[houseId]/notes           manager notes
+/dashboard/[houseId]/meetings        meetings + RSVP
+/dashboard/[houseId]/moveout         move-out checklist
+/dashboard/[houseId]/settings        house settings (tabs)
+/invite/[token]                      invite acceptance
 ```
 
 ---
 
-## KNOWN BUGS — ALL FIXED
+## BUGS FIXED (this session)
 
-1. ~~`src/proxy.js` should be `src/middleware.js`~~ → **FIXED**
-2. ~~Vault page rendered ledger entries~~ → **FIXED** (proper vault UI)
-3. ~~`grocery/[itemId]` used wrong houseId param~~ → **FIXED**
-4. ~~`tasks/[taskId]` had GET/POST instead of PATCH/DELETE~~ → **FIXED**
-5. ~~`memberships/.../verify/route.js` at wrong path~~ → **FIXED** (now at `[docId]/route.js`)
-6. ~~Toaster only in dashboard layout~~ → **FIXED** (in root layout)
-7. ~~No notification triggers~~ → **FIXED** (rent, task assign, invite accept)
+| #   | Bug                                                                                                    | Fix                                                       |
+| --- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| 1   | `src/proxy.js` wrong filename                                                                          | Rename to `src/middleware.js`                             |
+| 2   | `src/app/api/ledger/route.js` broken orphan — uses undefined `params.id`                               | **Delete this file**                                      |
+| 3   | `rules/[ruleId]/alerts/route.js` had broken PATCH (wrong URL segment)                                  | Rewrite to POST-only; PATCH moved to `[alertId]/route.js` |
+| 4   | `notes/page.jsx` calls `DELETE /api/notes/[noteId]` — no matching route                                | Created `/api/notes/[noteId]/route.js`                    |
+| 5   | `src/lib/sw.js` — service workers must be at root URL                                                  | Moved to `public/sw.js`                                   |
+| 6   | `memberships/.../documents/[docId]/verify/route.js` — dead code (UI calls without `/verify`)           | **Delete this file**; `[docId]/route.js` is correct       |
+| 7   | `User` model missing `fcmTokens` field used by push/subscribe route                                    | Added `fcmTokens` array to User schema                    |
+| 8   | `dashboard/layout.js` missing `/polls`, `/rules`, `/notes`, `/meetings`, `/moveout`, `/profile` in nav | Full rewrite of sidebar                                   |
+| 9   | `meetings/page.jsx` calls `PATCH /api/meetings/[meetingId]` — route was at wrong base path             | Created standalone `/api/meetings/[meetingId]/route.js`   |
 
 ---
 
-## DECISIONS MADE (DON'T RE-DEBATE THESE)
+## DECISIONS (DON'T RE-DEBATE)
 
-| Decision                                         | What                             | Why                             |
-| ------------------------------------------------ | -------------------------------- | ------------------------------- |
-| Polling not Socket.io                            | Chat uses 3s polling             | No Express server yet; Phase 3  |
-| Mongoose v7+ async hooks                         | No `next()` in pre-save          | v7 changed the API              |
-| `src/middleware.js`                              | Must be at this exact path       | Next.js convention              |
-| Integers for money                               | All amounts in paisa/paise/pence | No floating point rounding bugs |
-| AES-256-GCM for vault                            | Server-side encryption           | Simple, secure                  |
-| Clerk for auth                                   | Phone + email support            | Essential for BD/PK             |
-| `[docId]/route.js` not `[docId]/verify/route.js` | POST=verify, DELETE=delete       | Cleaner REST                    |
+| Decision                                          | What                                    | Why                                    |
+| ------------------------------------------------- | --------------------------------------- | -------------------------------------- |
+| Polling not Socket.io                             | Chat + grocery use polling              | No Express server yet; upgrade Phase 3 |
+| Mongoose v7+ async hooks                          | No `next()` in pre-save                 | v7 API change                          |
+| `src/middleware.js`                               | Exact path required by Next.js          | Convention                             |
+| Integers for money                                | All amounts in smallest unit (paisa)    | No float rounding bugs                 |
+| AES-256-GCM vault                                 | Server-side encryption                  | Simple and secure                      |
+| Soft delete                                       | `deletedAt` field, not actual deletion  | Preserve history                       |
+| `HouseRule.js` exports `{ HouseRule, RuleAlert }` | Named exports                           | Both used together                     |
+| `Bills.js` exports `{ Bill, BillSplit }`          | Named exports                           | Both used together                     |
+| `Polls.js` model name is `Poll`                   | Singular model name despite plural file | Mongoose convention                    |
 
 ---
 
 ## CODING RULES (ALWAYS FOLLOW)
 
-1. **API response shape:** `{ success: boolean, data?: any, error?: string }`
-2. **Auth pattern:** `const { userId: clerkId } = await auth()` → find User → check Membership
-3. **Money:** Store as integers (paisa). Display with `Intl.NumberFormat`.
-4. **No emojis** in UI — use lucide-react icons only
-5. **No `next()` in Mongoose hooks** — use `async function()` pattern
-6. **Optimistic UI** for grocery toggles, task completion — revert on failure
-7. **Privacy:** `LedgerEntry.managerNote` never sent to member. Rent amounts only visible to manager + that member.
-8. **File names:** API routes always `route.js`. Pages always `page.jsx`.
-9. **Image imports:** Always use `next/image` with correct src.
+1. API response shape: `{ success: boolean, data?: any, error?: string }`
+2. Auth: `const { userId: clerkId } = await auth()` → find User → check Membership
+3. **Always `await params`**: `const { id } = await params;` (Next.js 15 requirement)
+4. Money: store as integers (paisa/cents). Display with `Intl.NumberFormat`
+5. No `next()` in Mongoose pre-save hooks — use `async function()`
+6. Optimistic UI for grocery/tasks — always revert on API failure
+7. `LedgerEntry.managerNote` NEVER returned to member
+8. Vault items ALWAYS decrypted server-side before returning
+9. Route files: `route.js`. Page files: `page.jsx`
+10. `fcmTokens` stripped in `User.toSafeObject()` — never sent to client
 
 ---
 
-## PHASE 2 TASKS (START HERE NEXT SESSION)
+## PHASE 2 REMAINING TASKS (priority order)
 
-### High priority
+### Must-have before revenue
 
-1. **Stripe subscription** — free/pro enforcement (1 house, 6 members limit on free)
-2. **Receipt photo upload** — Cloudinary integration for bills
-3. **SMS reminders via Twilio** — rent due 3 days before
-4. **bKash/Nagad payment method tracking** — already in constants, needs UI polish
-5. **Move-out checklist** — when manager removes a member
+1. **Stripe subscriptions** — enforce free plan limits (1 house, 6 members)
+2. **File upload (Cloudinary)** — bill receipt photos, member document actual upload
+3. **Push notification wiring** — register service worker + FCM token in layout
 
-### Medium priority
+### Nice-to-have Phase 2
 
-6. **Task recurrence** — when a recurring task is marked done, auto-create next occurrence
-7. **Electricity meter reading tracker** — already in Bill model, needs dedicated UI
-8. **Manager announcements** — pinned must-read messages in threads
-9. **House meetings / scheduling** — RSVP + agenda
+4. **Task recurrence** — auto-create next task when recurring task marked done
+5. **Ledger pagination** — cursor-based, slow for 100+ entries
+6. **Electricity meter tracker UI** — model supports it, needs UI section in bills page
+7. **Socket.io chat** — replace 3s polling for real-time
 
-### Lower priority
+### Phase 3
 
-10. **Pagination on ledger** — slow for 100+ entries
-11. **Socket.io for chat** — replace 3s polling
-12. **Push notifications (FCM)** — mobile-ready
+8. React Native mobile app (Expo)
+9. bKash / Nagad / UPI payment collection via API
+10. WhatsApp Business API reminders
 
 ---
 
-## LAST SESSION SUMMARY
+## PRE-LAUNCH CHECKLIST
 
-**What was built / fixed:**
+```
+Environment:
+  [ ] MONGODB_URI set and Atlas cluster accessible
+  [ ] CLERK_SECRET_KEY + CLERK_WEBHOOK_SECRET set
+  [ ] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY set
+  [ ] VAULT_ENCRYPTION_KEY set (64-char hex)
+  [ ] NEXT_PUBLIC_APP_URL set to production domain
+  [ ] CRON_SECRET set (for rent reminders)
+  [ ] RESEND_API_KEY set (email)
+  [ ] TWILIO_* set (SMS)
+  [ ] FIREBASE_SERVICE_ACCOUNT_JSON set (push)
 
-1. `src/middleware.js` — created at correct path (was at `src/proxy.js`)
-2. `src/app/layout.js` — added global `<Toaster />` to root layout
-3. `src/models/Notification.js` — Mongoose model
-4. `src/lib/notifications.js` — `createNotification()` helper
-5. `src/app/api/notifications/route.js` — GET list + PATCH mark-read
-6. `src/app/dashboard/layout.js` — notification bell with unread badge + panel
-7. `src/app/dashboard/[houseId]/vault/page.jsx` — real vault UI (was copy of ledger)
-8. `src/app/api/houses/[id]/ledger/route.js` — added `createNotification` triggers
-9. `src/app/api/houses/[id]/tasks/route.js` — added `createNotification` on assignment
-10. `src/app/api/invites/[token]/route.js` — added `createNotification` on accept
-11. `src/app/api/grocery/[itemId]/route.js` — fixed param bug (was using `id` not `itemId`)
-12. `src/app/api/tasks/[taskId]/route.js` — rewrote: proper PATCH + DELETE (was GET + POST)
-13. `src/app/api/memberships/[membershipId]/documents/[docId]/route.js` — POST (verify) + DELETE at correct path
+Clerk Dashboard:
+  [ ] Webhook endpoint registered: https://yourdomain.com/api/webhooks/clerk
+  [ ] Webhook events enabled: user.created, user.updated, user.deleted
+  [ ] Allowed redirect URLs include production domain
+  [ ] Phone number auth enabled (for BD/PK users)
 
-**Phase 1 is now complete.**
+MongoDB Atlas:
+  [ ] IP allowlist includes Vercel (or 0.0.0.0/0 for serverless)
+  [ ] Indexes created (auto from schema on first connect)
+
+Vercel:
+  [ ] vercel.json with cron config deployed
+  [ ] All env vars set in Vercel dashboard
+  [ ] Production domain verified
+
+File operations:
+  [ ] RENAME src/proxy.js → src/middleware.js
+  [ ] DELETE src/app/api/ledger/route.js
+  [ ] DELETE src/app/api/memberships/[id]/documents/[docId]/verify/route.js
+  [ ] DELETE src/lib/sw.js
+  [ ] ADD public/sw.js
+  [ ] ADD vercel.json
+  [ ] ADD .env.example (for team reference)
+
+Testing:
+  [ ] npm run build — zero errors
+  [ ] Sign up → create house → invite member → accept invite flow
+  [ ] Log rent payment → PDF export
+  [ ] Add vault item → reveal → copy
+  [ ] Create task → mark done
+  [ ] Send chat message
+  [ ] Bill create → split → member sees ledger entry
+```
 
 ---
 
-## SESSION LOG
+## LAST SESSION
 
-| Date            | What was done                                                                        |
-| --------------- | ------------------------------------------------------------------------------------ |
-| Early sessions  | Foundation: models, auth, house creation, dashboard shell                            |
-| Mid sessions    | Ledger, Vault API, Tasks, Members, Settings                                          |
-| Bug fix session | Middleware rename, Mongoose hook fix, nav routing fix                                |
-| Session N       | Grocery + Chat, Bills + Split, Polls, architecture docs                              |
-| Session N+1     | Notifications model+API+bell UI, vault page fix, 5 route bug fixes, Phase 1 complete |
+**Date:** Current session
 
-PHASE 2 — NEXT SESSIONS (PRIORITY ORDER)
+**What was fixed:**
 
-SESSION A — Undo Feature (medium complexity, high value)
+- Full audit of all 100+ source files against all page fetch calls
+- Identified and fixed 9 confirmed bugs (listed above)
+- Created all missing API routes
+- Updated User model with fcmTokens
+- Fixed dashboard nav to include all pages
+- Created vercel.json, .env.example, public/sw.js
+- Output complete FIXES_README.md
 
-1. Create src/hooks/useUndo.js — universal hook using sonner action toasts
-2. Wire into: tasks/page.jsx, grocery/page.jsx, vault/page.jsx,
-   members/page.jsx, rules/page.jsx, bills/page.jsx
-   Pattern: optimistic update → 5s delay toast with Undo → API fires on expiry
-
-SESSION B — Email & SMS (external services, env vars needed)
-
-1. Resend setup: src/lib/email.js
-   - sendInviteEmail(invite, inviteUrl)
-   - sendRentReminderEmail(user, entry, house)
-2. Wire sendInviteEmail into POST /api/houses/[id]/invites
-3. Twilio SMS: src/lib/sms.js
-   - sendInviteSMS(phone, inviteUrl)
-   - Wire into invite creation when phone provided
-4. Bull queue jobs (needs Redis env var):
-   - src/jobs/rentReminders.js — runs daily, checks dueDate 3 days out
-   - src/jobs/taskNudges.js — runs daily, nudges overdue task assignees
-
-SESSION C — Permission Enforcement (critical for security)
-
-1. Create src/lib/permissions.js — getEffectivePermissions(membershipId)
-2. Wire permission checks into:
-   - POST /api/houses/[id]/threads (thread_create permission)
-   - POST /api/houses/[id]/vault (vault_write permission)
-   - POST /api/houses/[id]/tasks (task_create permission)
-   - POST /api/houses/[id]/grocery (grocery_write — add this permission)
-   - POST /api/houses/[id]/polls (poll_create permission)
-
-SESSION D — Browser Push Notifications (FCM)
-
-1. src/lib/fcm.js — sendPushNotification(userId, title, body)
-2. POST /api/push/subscribe — save FCM token to user
-3. Service worker: public/sw.js for background push
-4. Permission request UI in dashboard layout (after first login)
-
-SESSION E — Stripe Subscription (when ready to monetize)
-Currently free — do this when user base is established
-POST /api/webhooks/stripe
-Plan enforcement in API routes (house count, member count limits)
+**Start next session with:** Stripe subscription enforcement (free plan limits).

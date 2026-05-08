@@ -1,20 +1,11 @@
-// public/sw.js — Service Worker for Homify push notifications
-// This file must be at /public/sw.js to be served from the root
+// public/sw.js — Homy push notifications service worker
+// Must be at public/sw.js so it's served from the root URL /sw.js
 
 const APP_URL = self.location.origin;
-const CACHE_NAME = "homify-v1";
 
-// Install event — cache critical assets
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
-});
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(clients.claim()));
 
-// Activate event
-self.addEventListener("activate", (event) => {
-  event.waitUntil(clients.claim());
-});
-
-// Push notification received
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -22,11 +13,11 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "Homify", body: event.data.text() };
+    data = { title: "Homy", body: event.data.text() };
   }
 
   const {
-    title = "Homify",
+    title = "Homy",
     body = "",
     icon = "/favicon.png",
     badge = "/favicon.png",
@@ -34,27 +25,25 @@ self.addEventListener("push", (event) => {
     image,
   } = data;
 
-  const options = {
-    body,
-    icon,
-    badge,
-    data: { url },
-    vibrate: [100, 50, 100],
-    requireInteraction: false,
-    ...(image ? { image } : {}),
-    actions: [
-      { action: "view", title: "View", icon: "/favicon.png" },
-      { action: "dismiss", title: "Dismiss" },
-    ],
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge,
+      data: { url },
+      vibrate: [100, 50, 100],
+      requireInteraction: false,
+      ...(image ? { image } : {}),
+      actions: [
+        { action: "view", title: "View" },
+        { action: "dismiss", title: "Dismiss" },
+      ],
+    })
+  );
 });
 
-// Notification click
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   if (event.action === "dismiss") return;
 
   const url = event.notification.data?.url || "/dashboard";
@@ -64,14 +53,12 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        // Focus existing window if open
         for (const client of clientList) {
           if (client.url.startsWith(APP_URL) && "focus" in client) {
             client.navigate(fullUrl);
             return client.focus();
           }
         }
-        // Open new window
         if (clients.openWindow) return clients.openWindow(fullUrl);
       })
   );

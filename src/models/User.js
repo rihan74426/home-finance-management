@@ -27,7 +27,7 @@ const UserSchema = new Schema(
     phone: {
       type: String,
       trim: true,
-      default: null, // optional — Clerk supports phone-only auth
+      default: null,
     },
     name: {
       type: String,
@@ -55,13 +55,31 @@ const UserSchema = new Schema(
       default: null,
     },
 
+    // ── Push notification tokens (FCM) ────────────────────────────────────────
+    // Each entry: { token: string, platform: "web"|"ios"|"android", updatedAt: Date }
+    fcmTokens: {
+      type: [
+        {
+          token: { type: String, required: true },
+          platform: {
+            type: String,
+            enum: ["web", "ios", "android"],
+            default: "web",
+          },
+          updatedAt: { type: Date, default: Date.now },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
+
     // ── Preferences ──────────────────────────────────────────────────────────
     preferences: {
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
       currency: { type: String, default: "USD" },
       notificationsEnabled: { type: Boolean, default: true },
-      quietHoursStart: { type: String, default: "22:00" }, // "HH:MM" local time
+      quietHoursStart: { type: String, default: "22:00" },
       quietHoursEnd: { type: String, default: "08:00" },
     },
 
@@ -69,7 +87,7 @@ const UserSchema = new Schema(
     deletedAt: { type: Date, default: null },
   },
   {
-    timestamps: true, // createdAt, updatedAt
+    timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }
@@ -77,7 +95,7 @@ const UserSchema = new Schema(
 
 // ── Indexes ───────────────────────────────────────────────────────────────────
 UserSchema.index({ email: 1 });
-UserSchema.index({ phone: 1 }, { sparse: true }); // sparse: phone is optional
+UserSchema.index({ phone: 1 }, { sparse: true });
 UserSchema.index({ deletedAt: 1 });
 
 // ── Virtuals ──────────────────────────────────────────────────────────────────
@@ -92,10 +110,10 @@ UserSchema.virtual("isPro").get(function () {
 });
 
 // ── Methods ───────────────────────────────────────────────────────────────────
-// Strip sensitive fields before sending to client
 UserSchema.methods.toSafeObject = function () {
   const obj = this.toObject();
   delete obj.stripeCustomerId;
+  delete obj.fcmTokens; // never expose push tokens to client
   delete obj.__v;
   return obj;
 };

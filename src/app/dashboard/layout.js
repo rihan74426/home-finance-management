@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter, usePathname, useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
@@ -25,12 +25,16 @@ import {
   Video,
   BookMarked,
   StickyNote,
-  LogOut,
   BarChart2,
   Menu,
+  LogOut,
+  User,
 } from "lucide-react";
 
-const TOP_NAV = [{ href: "/dashboard", icon: Home, label: "My Houses" }];
+const TOP_NAV = [
+  { href: "/dashboard", icon: Home, label: "My Houses" },
+  { href: "/dashboard/profile", icon: User, label: "Profile" },
+];
 
 const HOUSE_NAV = [
   { href: "", icon: LayoutDashboard, label: "Overview" },
@@ -41,9 +45,11 @@ const HOUSE_NAV = [
   { href: "/grocery", icon: ShoppingCart, label: "Grocery" },
   { href: "/chat", icon: MessageSquare, label: "Chat" },
   { href: "/polls", icon: BarChart2, label: "Polls" },
-  { href: "/meetings", icon: Video, label: "Meetings" },
-  { href: "/rules", icon: StickyNote, label: "Rules & Notes" },
   { href: "/members", icon: Users, label: "Members" },
+  { href: "/rules", icon: BookMarked, label: "Rules" },
+  { href: "/notes", icon: StickyNote, label: "Notes" },
+  { href: "/meetings", icon: Video, label: "Meetings" },
+  { href: "/moveout", icon: LogOut, label: "Move-Out" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -121,6 +127,7 @@ function NotificationPanel({ onClose }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div
           style={{
             padding: "14px 18px",
@@ -183,6 +190,8 @@ function NotificationPanel({ onClose }) {
             </button>
           </div>
         </div>
+
+        {/* List */}
         <div style={{ overflowY: "auto", flex: 1 }}>
           {loading ? (
             <div
@@ -271,77 +280,70 @@ function NotificationPanel({ onClose }) {
   );
 }
 
-function Sidebar({ houseId, pathname, onClose, isMobile }) {
-  return (
-    <aside
-      style={{
-        width: 220,
-        flexShrink: 0,
-        borderRight: isMobile ? "none" : "1px solid var(--glass-border)",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg-mid)",
-        height: "100%",
-      }}
-    >
+export default function DashboardLayout({ children }) {
+  const { isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
+  const houseId = params?.houseId;
+
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) router.replace("/");
+  }, [isLoaded, isSignedIn, router]);
+
+  // Poll unread count every 30s
+  useEffect(() => {
+    if (!isSignedIn) return;
+    function fetchCount() {
+      fetch("/api/notifications?limit=1&unreadOnly=true")
+        .then((r) => r.json())
+        .then((j) => {
+          if (j.success) setUnreadCount(j.unreadCount || 0);
+        })
+        .catch(() => {});
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [isSignedIn]);
+
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    setShowMobileSidebar(false);
+  }, [pathname]);
+
+  if (!isLoaded) {
+    return (
       <div
         style={{
-          padding: "16px 18px 14px",
-          borderBottom: "1px solid var(--glass-border)",
+          minHeight: "100vh",
+          background: "var(--bg-base)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
         }}
       >
-        <Link
-          href="/dashboard"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 9,
-            textDecoration: "none",
-          }}
-          onClick={isMobile ? onClose : undefined}
-        >
-          <Image
-            src="/favicon.png"
-            alt="Homify"
-            width={24}
-            height={24}
-            style={{ borderRadius: 5, objectFit: "cover" }}
-          />
-          <span
-            style={{
-              fontWeight: 800,
-              fontSize: "1.05rem",
-              letterSpacing: "-0.02em",
-              color: "var(--text)",
-            }}
-          >
-            Homify
-          </span>
-        </Link>
-        {isMobile && (
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--muted)",
-              padding: 4,
-            }}
-          >
-            <X size={18} />
-          </button>
-        )}
+        <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+          Loading…
+        </div>
       </div>
+    );
+  }
+  if (!isSignedIn) return null;
 
+  // ── Shared sidebar nav renderer ──────────────────────────────────────────
+  function SidebarNav({ onLinkClick }) {
+    return (
       <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
         {houseId ? (
           <>
             <Link
               href="/dashboard"
+              onClick={onLinkClick}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -353,7 +355,6 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
                 color: "var(--muted)",
                 textDecoration: "none",
               }}
-              onClick={isMobile ? onClose : undefined}
             >
               <ChevronLeft size={13} /> All Houses
             </Link>
@@ -364,7 +365,7 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
                 <Link
                   key={href}
                   href={fullHref}
-                  onClick={isMobile ? onClose : undefined}
+                  onClick={onLinkClick}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -396,7 +397,7 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
               <Link
                 key={href}
                 href={href}
-                onClick={isMobile ? onClose : undefined}
+                onClick={onLinkClick}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -421,61 +422,8 @@ function Sidebar({ houseId, pathname, onClose, isMobile }) {
           })
         )}
       </nav>
-    </aside>
-  );
-}
-
-export default function DashboardLayout({ children }) {
-  const { isLoaded, isSignedIn } = useUser();
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useParams();
-  const houseId = params?.houseId;
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) router.replace("/");
-  }, [isLoaded, isSignedIn, router]);
-
-  useEffect(() => {
-    if (!isSignedIn) return;
-    function fetchCount() {
-      fetch("/api/notifications?limit=1&unreadOnly=true")
-        .then((r) => r.json())
-        .then((j) => {
-          if (j.success) setUnreadCount(j.unreadCount || 0);
-        })
-        .catch(() => {});
-    }
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
-  }, [isSignedIn]);
-
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    setShowMobileSidebar(false);
-  }, [pathname]);
-
-  if (!isLoaded)
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "var(--bg-base)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-          Loading…
-        </div>
-      </div>
     );
-  if (!isSignedIn) return null;
+  }
 
   return (
     <div
@@ -498,7 +446,7 @@ export default function DashboardLayout({ children }) {
         }}
       />
 
-      {/* Mobile overlay sidebar */}
+      {/* ── Mobile overlay sidebar ─────────────────────────────────────────── */}
       {showMobileSidebar && (
         <div
           style={{
@@ -511,21 +459,75 @@ export default function DashboardLayout({ children }) {
           onClick={() => setShowMobileSidebar(false)}
         >
           <div
-            style={{ width: 240, height: "100%" }}
+            style={{
+              width: 240,
+              height: "100%",
+              background: "var(--bg-mid)",
+              display: "flex",
+              flexDirection: "column",
+              borderRight: "1px solid var(--glass-border)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Sidebar
-              houseId={houseId}
-              pathname={pathname}
-              onClose={() => setShowMobileSidebar(false)}
-              isMobile={true}
-            />
+            {/* Mobile sidebar header */}
+            <div
+              style={{
+                padding: "16px 18px 14px",
+                borderBottom: "1px solid var(--glass-border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Link
+                href="/dashboard"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  textDecoration: "none",
+                }}
+                onClick={() => setShowMobileSidebar(false)}
+              >
+                <Image
+                  src="/favicon.png"
+                  alt="Homy"
+                  width={24}
+                  height={24}
+                  style={{ borderRadius: 5, objectFit: "cover" }}
+                />
+                <span
+                  style={{
+                    fontWeight: 800,
+                    fontSize: "1.05rem",
+                    letterSpacing: "-0.02em",
+                    color: "var(--text)",
+                  }}
+                >
+                  Homy
+                </span>
+              </Link>
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                  padding: 4,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <SidebarNav onLinkClick={() => setShowMobileSidebar(false)} />
           </div>
         </div>
       )}
 
-      {/* Mobile top bar */}
+      {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
+        className="mobile-topbar"
         style={{
           display: "none",
           position: "sticky",
@@ -537,7 +539,6 @@ export default function DashboardLayout({ children }) {
           alignItems: "center",
           justifyContent: "space-between",
         }}
-        className="mobile-topbar"
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
@@ -563,7 +564,7 @@ export default function DashboardLayout({ children }) {
           >
             <Image
               src="/favicon.png"
-              alt="Homify"
+              alt="Homy"
               width={22}
               height={22}
               style={{ borderRadius: 5, objectFit: "cover" }}
@@ -575,7 +576,7 @@ export default function DashboardLayout({ children }) {
                 color: "var(--text)",
               }}
             >
-              Homify
+              Homy
             </span>
           </Link>
         </div>
@@ -621,6 +622,7 @@ export default function DashboardLayout({ children }) {
         </div>
       </div>
 
+      {/* ── Main layout ────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Desktop sidebar */}
         <div
@@ -637,6 +639,7 @@ export default function DashboardLayout({ children }) {
             background: "var(--bg-mid)",
           }}
         >
+          {/* Logo */}
           <div
             style={{
               padding: "18px 20px 16px",
@@ -654,7 +657,7 @@ export default function DashboardLayout({ children }) {
             >
               <Image
                 src="/favicon.png"
-                alt="Homify"
+                alt="Homy"
                 width={24}
                 height={24}
                 style={{ borderRadius: 5, objectFit: "cover" }}
@@ -667,98 +670,14 @@ export default function DashboardLayout({ children }) {
                   color: "var(--text)",
                 }}
               >
-                Homify
+                Homy
               </span>
             </Link>
           </div>
 
-          <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
-            {houseId ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "7px 12px",
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    fontSize: "0.78rem",
-                    color: "var(--muted)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <ChevronLeft size={13} /> All Houses
-                </Link>
-                {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
-                  const fullHref = `/dashboard/${houseId}${href}`;
-                  const active = pathname === fullHref;
-                  return (
-                    <Link
-                      key={href}
-                      href={fullHref}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "8px 12px",
-                        borderRadius: 10,
-                        marginBottom: 1,
-                        fontSize: "0.855rem",
-                        fontWeight: active ? 600 : 400,
-                        color: active ? "var(--text)" : "var(--muted)",
-                        background: active
-                          ? "var(--glass-bg-mid)"
-                          : "transparent",
-                        textDecoration: "none",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <Icon
-                        size={15}
-                        color={active ? "var(--accent)" : "var(--muted)"}
-                      />
-                      {label}
-                    </Link>
-                  );
-                })}
-              </>
-            ) : (
-              TOP_NAV.map(({ href, icon: Icon, label }) => {
-                const active = pathname === href;
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "9px 12px",
-                      borderRadius: 10,
-                      marginBottom: 2,
-                      fontSize: "0.875rem",
-                      fontWeight: active ? 600 : 400,
-                      color: active ? "var(--text)" : "var(--muted)",
-                      background: active
-                        ? "var(--glass-bg-mid)"
-                        : "transparent",
-                      textDecoration: "none",
-                    }}
-                  >
-                    <Icon
-                      size={16}
-                      color={active ? "var(--accent)" : "var(--muted)"}
-                    />
-                    {label}
-                  </Link>
-                );
-              })
-            )}
-          </nav>
+          <SidebarNav onLinkClick={undefined} />
 
-          {/* Desktop bottom: notifications + user */}
+          {/* Bottom: notifications + user */}
           <div
             style={{
               padding: "12px 14px",
@@ -839,6 +758,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </div>
 
+        {/* Page content */}
         <main style={{ flex: 1, overflow: "auto", minWidth: 0 }}>
           <div style={{ padding: "clamp(16px, 4vw, 28px)" }}>{children}</div>
         </main>
