@@ -174,9 +174,9 @@ function MeetingCard({
                 }}
               >
                 {meeting.type === "online" ? (
-                  <Video size={10} />
+                  <Video size={10} className="inline" />
                 ) : (
-                  <MapPin size={10} />
+                  <MapPin size={10} className="inline" />
                 )}
                 {meeting.type === "online"
                   ? PLATFORM_CONFIG[meeting.platform]?.label || "Online"
@@ -706,7 +706,7 @@ export default function MeetingsPage() {
               marginBottom: 4,
             }}
           >
-            <Video size={20} color="var(--accent)" />
+            <Video size={20} color="var(--accent)" className="inline" />
             <h1
               style={{
                 fontSize: "1.4rem",
@@ -1031,7 +1031,11 @@ export default function MeetingsPage() {
             color: "var(--muted)",
           }}
         >
-          <Video size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <Video
+            size={40}
+            style={{ marginBottom: 12, opacity: 0.3 }}
+            className="inline"
+          />
           <p>No upcoming meetings.</p>
           <p style={{ fontSize: "0.82rem", marginTop: 4 }}>
             Schedule a house meeting to coordinate with everyone.

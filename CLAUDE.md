@@ -315,3 +315,14 @@ Testing:
 - Output complete FIXES_README.md
 
 **Start next session with:** Stripe subscription enforcement (free plan limits).
+
+the dashboard page should cache the house for instance. and add skeleton and improve the ui of that page.
+the skeletons of every page should be checked.
+
+the sidebar is not staying fixed.
+
+the undo feature.
+
+the alert system should put an red alarm beep theme in the theme or UI.
+
+check the lifecycle of the app. if all the available functions are connected to each other and working with each other very fine. especially the payment and splits are pending and how they're gonna pay and mark it as paid. or do you have a system for that?
