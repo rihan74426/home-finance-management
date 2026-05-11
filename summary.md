@@ -1,16 +1,16 @@
-# Homy — Complete Project Summary
+# Homify — Complete Project Summary
 
-## What is Homy?
+## What is Homify?
 
-Homy is a **household operating system** — a single app where everyone in a shared home manages rent, bills, tasks, groceries, important info, and house chat. Built for people who share a living space: flatmates, tenants, families, co-living residents.
+Homify is a **household operating system** — a single app where everyone in a shared home manages rent, bills, tasks, groceries, important info, and house chat. Built for people who share a living space: flatmates, tenants, families, co-living residents.
 
-The core insight: **managing a shared home creates daily friction** — the awkward rent reminder, the WiFi password nobody can find, the cleaning argument, the electricity bill nobody tracked. Homy removes all of it quietly, so people can just live.
+The core insight: **managing a shared home creates daily friction** — the awkward rent reminder, the WiFi password nobody can find, the cleaning argument, the electricity bill nobody tracked. Homify removes all of it quietly, so people can just live.
 
 ---
 
 ## Where We Came From
 
-The project started as **EquiFlow** — a beautiful marketing website for a household finance app with zero actual product functionality. The pivot: broaden from finance-only to a full household management platform. Renamed to **Homy**. Tech migrated from Vite + React to Next.js 14.
+The project started as **EquiFlow** — a beautiful marketing website for a household finance app with zero actual product functionality. The pivot: broaden from finance-only to a full household management platform. Renamed to **Homify**. Tech migrated from Vite + React to Next.js 14.
 
 ---
 
@@ -119,7 +119,7 @@ The project started as **EquiFlow** — a beautiful marketing website for a hous
 
 ---
 
-## Migration From EquiFlow to Homy
+## Migration From EquiFlow to Homify
 
 1. New Turborepo monorepo (`apps/web`, `apps/mobile`, `packages/api`, `packages/shared`)
 2. Next.js 14 App Router replaces Vite + React
@@ -191,7 +191,7 @@ Free tier: 1 house, 6 members, basic features (genuinely useful, not crippled)
 - **Predictive maintenance:** AI suggests appliance replacement before failure
 - **Housing marketplace:** Outgoing tenants connect with incoming ones via house profile
 - **Property management SaaS:** White-label for 50–500 unit operators
-- **Homy Concierge:** Human-assisted house admin service (premium tier)
+- **Homify Concierge:** Human-assisted house admin service (premium tier)
 - **Smart home integration:** Smart locks, smart meters, IoT devices
 - **Financial health layer:** Rental history as credit signal, household savings products
 
@@ -204,7 +204,7 @@ Free tier: 1 house, 6 members, basic features (genuinely useful, not crippled)
 3. **Connect MongoDB** — Atlas cluster, base Mongoose models
 4. **Build House creation flow** — Create house → set name → invite first member
 5. **Build Rent Ledger** — The highest-value feature for target market
-6. **Deploy landing page** — Homy branded, collect waitlist emails
+6. **Deploy landing page** — Homify branded, collect waitlist emails
 
 ---
 

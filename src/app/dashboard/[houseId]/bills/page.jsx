@@ -19,9 +19,11 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Check,
 } from "lucide-react";
-import { BILL_TYPE, BILL_SPLIT_TYPE } from "@/lib/constants";
+import { BILL_TYPE, BILL_SPLIT_TYPE, PAYMENT_METHOD } from "@/lib/constants";
 
+// ── Config ────────────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
   electricity: { label: "Electricity", icon: Zap, color: "#fbbf24" },
   water: { label: "Water", icon: Droplets, color: "#38bdf8" },
@@ -34,36 +36,25 @@ const TYPE_CONFIG = {
 };
 
 const STATUS_CONFIG = {
-  paid: {
-    label: "Paid",
-    color: "#4ade80",
-    bg: "rgba(74,222,128,0.1)",
-    border: "rgba(74,222,128,0.25)",
-    icon: CheckCircle,
-  },
-  partial: {
-    label: "Partial",
-    color: "#fbbf24",
-    bg: "rgba(251,191,36,0.1)",
-    border: "rgba(251,191,36,0.25)",
-    icon: Clock,
-  },
-  pending: {
-    label: "Pending",
-    color: "var(--muted)",
-    bg: "var(--glass-bg)",
-    border: "var(--glass-border)",
-    icon: Clock,
-  },
-  overdue: {
-    label: "Overdue",
-    color: "#f87171",
-    bg: "rgba(248,113,113,0.1)",
-    border: "rgba(248,113,113,0.25)",
-    icon: AlertCircle,
-  },
+  paid: { label: "Paid", color: "#4ade80", icon: CheckCircle },
+  partial: { label: "Partial", color: "#fbbf24", icon: Clock },
+  pending: { label: "Pending", color: "var(--muted)", icon: Clock },
+  overdue: { label: "Overdue", color: "#f87171", icon: AlertCircle },
 };
 
+const PAYMENT_METHOD_LABELS = {
+  cash: "Cash",
+  bkash: "bKash",
+  nagad: "Nagad",
+  jazz_cash: "JazzCash",
+  easy_paisa: "EasyPaisa",
+  upi: "UPI",
+  bank_transfer: "Bank Transfer",
+  card: "Card",
+  other: "Other",
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtCurrency(amount, currency) {
   if (amount == null) return "—";
   try {
@@ -76,7 +67,6 @@ function fmtCurrency(amount, currency) {
     return `${amount / 100}`;
   }
 }
-
 function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", {
@@ -107,6 +97,480 @@ const lS = {
   letterSpacing: "0.05em",
 };
 
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function BillsSkeleton() {
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+        }}
+      >
+        <div
+          className="sk"
+          style={{ width: 80, height: 28, borderRadius: 6 }}
+        />
+        <div
+          className="sk"
+          style={{ width: 100, height: 36, borderRadius: 50 }}
+        />
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{ height: 72, borderRadius: 14, marginBottom: 8 }}
+        />
+      ))}
+      <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+    </div>
+  );
+}
+
+// ── Mark Paid Modal ───────────────────────────────────────────────────────────
+// Shown when manager clicks "Mark Paid" on a split row
+function MarkPaidModal({ split, bill, house, onClose, onSaved }) {
+  const [amountPaid, setAmountPaid] = useState(String(split.shareAmount / 100));
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const paid = Math.round(parseFloat(amountPaid) * 100);
+    if (isNaN(paid) || paid < 0) {
+      toast.error("Enter a valid amount.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/bills/${bill._id}/split/${split._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountPaid: paid, paymentMethod }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error);
+        return;
+      }
+      toast.success("Payment recorded.");
+      onSaved(split._id, paid, paymentMethod);
+      onClose();
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const memberName = split.membershipId?.userId?.name || "Member";
+  const isFullPay =
+    Math.round(parseFloat(amountPaid) * 100) >= split.shareAmount;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          background: "var(--bg-mid)",
+          border: "1px solid var(--glass-border)",
+          borderRadius: 16,
+          padding: 28,
+          width: "100%",
+          maxWidth: 380,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 18,
+          }}
+        >
+          <h2 style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+            Record Payment
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Context */}
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--glass-border)",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 18,
+          }}
+        >
+          <div
+            style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 3 }}
+          >
+            {memberName}
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+            {bill.label || TYPE_CONFIG[bill.type]?.label} · Share:{" "}
+            <strong style={{ color: "var(--text)" }}>
+              {fmtCurrency(split.shareAmount, house?.currency)}
+            </strong>
+          </div>
+          {split.status !== "pending" && (
+            <div
+              style={{
+                fontSize: "0.75rem",
+                marginTop: 4,
+                color: STATUS_CONFIG[split.status]?.color || "var(--muted)",
+              }}
+            >
+              Current status: {split.status}
+            </div>
+          )}
+        </div>
+
+        <form
+          onSubmit={handleSave}
+          style={{ display: "flex", flexDirection: "column", gap: 13 }}
+        >
+          <div>
+            <label style={lS}>Amount Paid ({house?.currency}) *</label>
+            <input
+              style={iS}
+              type="number"
+              min="0"
+              step="0.01"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+            />
+            {!isFullPay && parseFloat(amountPaid) > 0 && (
+              <div
+                style={{ fontSize: "0.72rem", color: "#fbbf24", marginTop: 4 }}
+              >
+                Partial payment —{" "}
+                {fmtCurrency(
+                  split.shareAmount - Math.round(parseFloat(amountPaid) * 100),
+                  house?.currency
+                )}{" "}
+                remaining
+              </div>
+            )}
+          </div>
+          <div>
+            <label style={lS}>Payment Method</label>
+            <select
+              style={{ ...iS, cursor: "pointer" }}
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setAmountPaid(String(split.shareAmount / 100))}
+              style={{
+                flex: 1,
+                padding: "9px",
+                borderRadius: 9,
+                background: "var(--teal-dim)",
+                border: "1px solid var(--teal-border)",
+                color: "var(--teal)",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Full Amount
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              style={{
+                flex: 2,
+                padding: "9px",
+                borderRadius: 9,
+                background: saving ? "var(--glass-bg-mid)" : "var(--accent)",
+                color: saving ? "var(--muted)" : "#fff",
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                border: "none",
+                cursor: saving ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+              }}
+            >
+              {saving ? (
+                <Loader2
+                  size={14}
+                  style={{ animation: "spin 1s linear infinite" }}
+                />
+              ) : (
+                <Check size={14} />
+              )}
+              {saving ? "Saving…" : "Save Payment"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Split Details Panel ───────────────────────────────────────────────────────
+function SplitPanel({
+  bill,
+  house,
+  isManager,
+  splitDetails,
+  loadingSplits,
+  onMarkPaid,
+}) {
+  if (loadingSplits) {
+    return (
+      <div
+        style={{
+          borderTop: "1px solid var(--glass-border)",
+          padding: "12px 18px",
+        }}
+      >
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            style={{
+              height: 40,
+              background: "var(--glass-bg-mid)",
+              borderRadius: 8,
+              marginBottom: 6,
+              animation: "pulse 1.5s ease-in-out infinite",
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!splitDetails?.length) {
+    return (
+      <div
+        style={{
+          borderTop: "1px solid var(--glass-border)",
+          padding: "14px 18px",
+        }}
+      >
+        <p style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+          No split data available.
+        </p>
+      </div>
+    );
+  }
+
+  const totalPaid = splitDetails.reduce((s, sp) => {
+    if (sp.status === "paid") return s + sp.shareAmount;
+    return s;
+  }, 0);
+  const allPaid = splitDetails.every((sp) => sp.status === "paid");
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--glass-border)",
+        background: "var(--bg-surface)",
+      }}
+    >
+      {/* Progress bar */}
+      <div style={{ padding: "12px 18px 8px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--muted)",
+              fontWeight: 600,
+            }}
+          >
+            Collection progress
+          </span>
+          <span
+            style={{
+              fontSize: "0.72rem",
+              color: allPaid ? "#4ade80" : "var(--muted)",
+              fontWeight: 700,
+            }}
+          >
+            {fmtCurrency(totalPaid, house?.currency)} /{" "}
+            {fmtCurrency(bill.totalAmount, house?.currency)}
+          </span>
+        </div>
+        <div
+          style={{
+            height: 4,
+            background: "var(--glass-border)",
+            borderRadius: 50,
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              borderRadius: 50,
+              background: allPaid ? "#4ade80" : "var(--accent)",
+              width: `${Math.min(100, (totalPaid / bill.totalAmount) * 100)}%`,
+              transition: "width 0.4s ease",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Per-member rows */}
+      <div
+        style={{
+          padding: "4px 18px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        {splitDetails.map((split) => {
+          const sc = STATUS_CONFIG[split.status] || STATUS_CONFIG.pending;
+          const SIcon = sc.icon;
+          const name = split.membershipId?.userId?.name || "Member";
+          const isOverdue = split.status === "overdue";
+          return (
+            <div
+              key={split._id}
+              className={isOverdue ? "row-overdue" : ""}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "9px 12px",
+                background: "var(--glass-bg)",
+                borderRadius: 9,
+                border: `1px solid ${isOverdue ? "rgba(248,113,113,0.3)" : "var(--glass-border)"}`,
+              }}
+            >
+              {/* Avatar */}
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "var(--accent-dim)",
+                  border: "1px solid var(--accent-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                  flexShrink: 0,
+                }}
+              >
+                {name[0]?.toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: "0.84rem", fontWeight: 600 }}>
+                  {name}
+                </span>
+              </div>
+
+              {/* Status */}
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: "0.68rem",
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: 50,
+                  color: sc.color,
+                  background: `${sc.color}18`,
+                  border: `1px solid ${sc.color}30`,
+                  flexShrink: 0,
+                }}
+              >
+                <SIcon size={10} /> {sc.label}
+              </span>
+
+              {/* Amount */}
+              <span
+                style={{ fontWeight: 700, fontSize: "0.875rem", flexShrink: 0 }}
+              >
+                {fmtCurrency(split.shareAmount, house?.currency)}
+              </span>
+
+              {/* Action */}
+              {isManager && split.status !== "paid" && (
+                <button
+                  onClick={() => onMarkPaid(split)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 8,
+                    background: "var(--accent-dim)",
+                    border: "1px solid var(--accent-border)",
+                    color: "var(--accent)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Mark Paid
+                </button>
+              )}
+              {split.status === "paid" && (
+                <CheckCircle
+                  size={16}
+                  color="#4ade80"
+                  style={{ flexShrink: 0 }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function BillsPage() {
   const { houseId } = useParams();
   const [bills, setBills] = useState([]);
@@ -118,11 +582,13 @@ export default function BillsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [expandedBill, setExpandedBill] = useState(null);
   const [splitDetails, setSplitDetails] = useState({});
+  const [loadingSplits, setLoadingSplits] = useState({});
   const [splitting, setSplitting] = useState(null);
   const [splitForm, setSplitForm] = useState({
     type: "equal",
     customSplits: [],
   });
+  const [markPaidSplit, setMarkPaidSplit] = useState(null); // { split, bill }
 
   const [form, setForm] = useState({
     type: "electricity",
@@ -169,7 +635,7 @@ export default function BillsPage() {
       !form.periodEnd ||
       !form.dueDate
     ) {
-      toast.error("Please fill in all required fields.");
+      toast.error("Fill in all required fields.");
       return;
     }
     setSubmitting(true);
@@ -207,9 +673,9 @@ export default function BillsPage() {
         meterReadingEnd: "",
         note: "",
       });
-      toast.success("Bill created successfully.");
+      toast.success("Bill created.");
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error("Network error.");
     } finally {
       setSubmitting(false);
     }
@@ -217,7 +683,6 @@ export default function BillsPage() {
 
   async function handleSplit(bill) {
     setSplitting(bill._id);
-    // Init custom splits
     setSplitForm({
       type: "equal",
       customSplits: members.map((m) => ({
@@ -237,12 +702,11 @@ export default function BillsPage() {
       );
       if (total !== bill.totalAmount) {
         toast.error(
-          `Custom splits must total ${fmtCurrency(bill.totalAmount, house?.currency)}. Currently ${fmtCurrency(total * 100, house?.currency)}.`
+          `Splits must total ${fmtCurrency(bill.totalAmount, house?.currency)}.`
         );
         return;
       }
     }
-
     try {
       const res = await fetch(`/api/bills/${bill._id}/split`, {
         method: "POST",
@@ -266,7 +730,10 @@ export default function BillsPage() {
         p.map((b) => (b._id === bill._id ? { ...b, isSplit: true } : b))
       );
       setSplitting(null);
-      toast.success("Bill split among members. Ledger entries created.");
+      // Auto-expand to show splits
+      setExpandedBill(bill._id);
+      await loadSplitDetails(bill._id);
+      toast.success("Bill split. Members will see it in their ledger.");
     } catch {
       toast.error("Network error.");
     }
@@ -274,20 +741,43 @@ export default function BillsPage() {
 
   async function loadSplitDetails(billId) {
     if (splitDetails[billId]) {
-      setExpandedBill(expandedBill === billId ? null : billId);
+      setExpandedBill((prev) => (prev === billId ? null : billId));
       return;
     }
-    const res = await fetch(`/api/bills/${billId}/split`);
-    const json = await res.json();
-    if (json.success) setSplitDetails((p) => ({ ...p, [billId]: json.data }));
     setExpandedBill(billId);
+    setLoadingSplits((p) => ({ ...p, [billId]: true }));
+    try {
+      const res = await fetch(`/api/bills/${billId}/split`);
+      const json = await res.json();
+      if (json.success) setSplitDetails((p) => ({ ...p, [billId]: json.data }));
+    } finally {
+      setLoadingSplits((p) => ({ ...p, [billId]: false }));
+    }
+  }
+
+  // Called after mark-paid modal saves
+  function handleSplitPaid(splitId, amountPaid, paymentMethod) {
+    setSplitDetails((prev) => {
+      const updated = {};
+      for (const [billId, splits] of Object.entries(prev)) {
+        updated[billId] = splits.map((sp) => {
+          if (sp._id !== splitId) return sp;
+          const newStatus =
+            amountPaid >= sp.shareAmount
+              ? "paid"
+              : amountPaid > 0
+                ? "partial"
+                : "pending";
+          return { ...sp, status: newStatus };
+        });
+      }
+      return updated;
+    });
   }
 
   if (loading) return <BillsSkeleton />;
 
-  const totalThisMonth = bills
-    .slice(0, 10)
-    .reduce((s, b) => s + (b.totalAmount || 0), 0);
+  const unsplitCount = bills.filter((b) => !b.isSplit).length;
 
   return (
     <div>
@@ -322,6 +812,13 @@ export default function BillsPage() {
           </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             {house?.name} · {bills.length} bill{bills.length !== 1 ? "s" : ""}
+            {unsplitCount > 0 && (
+              <span
+                style={{ marginLeft: 8, color: "#fbbf24", fontWeight: 600 }}
+              >
+                · {unsplitCount} need splitting
+              </span>
+            )}
           </p>
         </div>
         {isManager && (
@@ -346,18 +843,18 @@ export default function BillsPage() {
         )}
       </div>
 
-      {/* Summary */}
+      {/* Summary stats — manager only */}
       {isManager && bills.length > 0 && (
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12,
-            marginBottom: 24,
+            gap: 10,
+            marginBottom: 22,
           }}
         >
           {[
-            { label: "Total Bills", value: bills.length, color: "var(--text)" },
+            { label: "Total", value: bills.length, color: "var(--text)" },
             {
               label: "Split",
               value: bills.filter((b) => b.isSplit).length,
@@ -365,8 +862,8 @@ export default function BillsPage() {
             },
             {
               label: "Pending Split",
-              value: bills.filter((b) => !b.isSplit).length,
-              color: "#fbbf24",
+              value: unsplitCount,
+              color: unsplitCount > 0 ? "#fbbf24" : "var(--muted)",
             },
           ].map((s) => (
             <div
@@ -375,7 +872,7 @@ export default function BillsPage() {
                 background: "var(--glass-bg)",
                 border: "1px solid var(--glass-border)",
                 borderRadius: 12,
-                padding: "14px 16px",
+                padding: "12px 16px",
               }}
             >
               <div
@@ -399,7 +896,7 @@ export default function BillsPage() {
         </div>
       )}
 
-      {/* Create Bill Modal */}
+      {/* ── Create Bill Modal ── */}
       {showForm && (
         <div
           style={{
@@ -446,14 +943,13 @@ export default function BillsPage() {
                 <X size={18} />
               </button>
             </div>
-
             <form
               onSubmit={handleCreate}
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              style={{ display: "flex", flexDirection: "column", gap: 13 }}
             >
-              {/* Type */}
+              {/* Type selector */}
               <div>
-                <label style={lS}>Bill Type *</label>
+                <label style={lS}>Type *</label>
                 <div
                   style={{
                     display: "grid",
@@ -473,42 +969,38 @@ export default function BillsPage() {
                           padding: "8px 4px",
                           borderRadius: 9,
                           border: on
-                            ? `1.5px solid var(--accent)`
+                            ? "1.5px solid var(--accent)"
                             : "1px solid var(--glass-border)",
                           background: on
                             ? "var(--accent-dim)"
                             : "var(--glass-bg)",
                           color: on ? "var(--text)" : "var(--muted)",
-                          fontSize: "0.7rem",
+                          fontSize: "0.68rem",
                           fontWeight: on ? 600 : 400,
                           cursor: "pointer",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 3,
                         }}
                       >
-                        <Icon size={14} color={on ? c.color : "var(--muted)"} />
+                        <Icon size={13} color={on ? c.color : "var(--muted)"} />
                         {c.label}
                       </button>
                     );
                   })}
                 </div>
               </div>
-
-              {/* Label */}
               <div>
                 <label style={lS}>Label</label>
                 <input
                   style={iS}
-                  placeholder={`e.g. Electricity — April 2025`}
+                  placeholder="e.g. Electricity — April 2025"
                   value={form.label}
                   onChange={(e) => setF("label", e.target.value)}
                   maxLength={200}
                 />
               </div>
-
-              {/* Amount */}
               <div>
                 <label style={lS}>Total Amount ({house?.currency}) *</label>
                 <input
@@ -516,13 +1008,10 @@ export default function BillsPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="e.g. 1200"
                   value={form.totalAmount}
                   onChange={(e) => setF("totalAmount", e.target.value)}
                 />
               </div>
-
-              {/* Meter readings (electricity only) */}
               {form.type === "electricity" && (
                 <div
                   style={{
@@ -532,7 +1021,7 @@ export default function BillsPage() {
                   }}
                 >
                   <div>
-                    <label style={lS}>Meter Start (units)</label>
+                    <label style={lS}>Meter Start</label>
                     <input
                       style={iS}
                       type="number"
@@ -544,7 +1033,7 @@ export default function BillsPage() {
                     />
                   </div>
                   <div>
-                    <label style={lS}>Meter End (units)</label>
+                    <label style={lS}>Meter End</label>
                     <input
                       style={iS}
                       type="number"
@@ -555,8 +1044,6 @@ export default function BillsPage() {
                   </div>
                 </div>
               )}
-
-              {/* Dates */}
               <div
                 style={{
                   display: "grid",
@@ -592,19 +1079,6 @@ export default function BillsPage() {
                   onChange={(e) => setF("dueDate", e.target.value)}
                 />
               </div>
-
-              {/* Note */}
-              <div>
-                <label style={lS}>Note</label>
-                <input
-                  style={iS}
-                  placeholder="Optional"
-                  value={form.note}
-                  onChange={(e) => setF("note", e.target.value)}
-                  maxLength={500}
-                />
-              </div>
-
               <button
                 type="submit"
                 disabled={submitting}
@@ -639,7 +1113,7 @@ export default function BillsPage() {
         </div>
       )}
 
-      {/* Split Modal */}
+      {/* ── Split Modal ── */}
       {splitting &&
         (() => {
           const bill = bills.find((b) => b._id === splitting);
@@ -692,7 +1166,6 @@ export default function BillsPage() {
                     <X size={18} />
                   </button>
                 </div>
-
                 <div
                   style={{
                     background: "var(--glass-bg)",
@@ -708,9 +1181,7 @@ export default function BillsPage() {
                     Total: {fmtCurrency(bill.totalAmount, house?.currency)}
                   </div>
                 </div>
-
-                {/* Split type toggle */}
-                <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                   {["equal", "custom"].map((t) => (
                     <button
                       key={t}
@@ -741,14 +1212,13 @@ export default function BillsPage() {
                     </button>
                   ))}
                 </div>
-
                 {splitForm.type === "equal" ? (
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: 6,
-                      marginBottom: 16,
+                      gap: 5,
+                      marginBottom: 14,
                     }}
                   >
                     {members.map((m, i) => {
@@ -790,7 +1260,7 @@ export default function BillsPage() {
                       display: "flex",
                       flexDirection: "column",
                       gap: 8,
-                      marginBottom: 16,
+                      marginBottom: 10,
                     }}
                   >
                     {splitForm.customSplits.map((s, i) => (
@@ -823,7 +1293,6 @@ export default function BillsPage() {
                         />
                       </div>
                     ))}
-                    {/* Total checker */}
                     {(() => {
                       const total = splitForm.customSplits.reduce(
                         (s, c) => s + (parseInt(c.shareAmount) || 0),
@@ -834,19 +1303,18 @@ export default function BillsPage() {
                         <div
                           style={{
                             fontSize: "0.78rem",
-                            color: diff === 0 ? "#4ade80" : "#f87171",
                             textAlign: "right",
+                            color: diff === 0 ? "#4ade80" : "#f87171",
                           }}
                         >
                           {diff === 0
                             ? "✓ Totals match"
-                            : `${diff > 0 ? `${fmtCurrency(diff, house?.currency)} remaining` : `${fmtCurrency(Math.abs(diff), house?.currency)} over`}`}
+                            : `${diff > 0 ? fmtCurrency(diff, house?.currency) + " remaining" : fmtCurrency(Math.abs(diff), house?.currency) + " over"}`}
                         </div>
                       );
                     })()}
                   </div>
                 )}
-
                 <button
                   onClick={() => runSplit(bill)}
                   style={{
@@ -868,18 +1336,35 @@ export default function BillsPage() {
           );
         })()}
 
-      {/* Bills list */}
+      {/* ── Mark Paid Modal ── */}
+      {markPaidSplit && (
+        <MarkPaidModal
+          split={markPaidSplit.split}
+          bill={markPaidSplit.bill}
+          house={house}
+          onClose={() => setMarkPaidSplit(null)}
+          onSaved={handleSplitPaid}
+        />
+      )}
+
+      {/* ── Bills list ── */}
       {bills.length === 0 ? (
         <div
           style={{
             textAlign: "center",
             padding: "60px 0",
-            justifyItems: "center",
-
             color: "var(--muted)",
           }}
         >
-          <Zap size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <Zap
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
           <p>
             {isManager
               ? "No bills yet. Add the first one."
@@ -892,13 +1377,17 @@ export default function BillsPage() {
             const tc = TYPE_CONFIG[bill.type] || TYPE_CONFIG.other;
             const TypeIcon = tc.icon;
             const isExpanded = expandedBill === bill._id;
+            const splits = splitDetails[bill._id] || [];
+            const allPaid =
+              splits.length > 0 && splits.every((s) => s.status === "paid");
+            const hasOverdue = splits.some((s) => s.status === "overdue");
 
             return (
               <div
                 key={bill._id}
                 style={{
                   background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
+                  border: `1px solid ${hasOverdue ? "rgba(248,113,113,0.3)" : "var(--glass-border)"}`,
                   borderRadius: 14,
                   overflow: "hidden",
                 }}
@@ -908,7 +1397,7 @@ export default function BillsPage() {
                     padding: "14px 18px",
                     display: "flex",
                     alignItems: "center",
-                    gap: 14,
+                    gap: 12,
                   }}
                 >
                   {/* Icon */}
@@ -927,14 +1416,13 @@ export default function BillsPage() {
                   >
                     <TypeIcon size={16} color={tc.color} />
                   </div>
-
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 7,
                         flexWrap: "wrap",
                         marginBottom: 3,
                       }}
@@ -949,12 +1437,18 @@ export default function BillsPage() {
                             fontWeight: 600,
                             padding: "2px 8px",
                             borderRadius: 50,
-                            color: "#4ade80",
-                            background: "rgba(74,222,128,0.1)",
-                            border: "1px solid rgba(74,222,128,0.2)",
+                            color: allPaid ? "#4ade80" : "#fbbf24",
+                            background: allPaid
+                              ? "rgba(74,222,128,0.1)"
+                              : "rgba(251,191,36,0.1)",
+                            border: `1px solid ${allPaid ? "rgba(74,222,128,0.2)" : "rgba(251,191,36,0.2)"}`,
                           }}
                         >
-                          Split
+                          {allPaid
+                            ? "Fully Collected"
+                            : hasOverdue
+                              ? "Has Overdue"
+                              : "Split — Collecting"}
                         </span>
                       ) : (
                         <span
@@ -971,6 +1465,18 @@ export default function BillsPage() {
                           Not split
                         </span>
                       )}
+                      {hasOverdue && (
+                        <span
+                          className="alert-pulse"
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            background: "#f87171",
+                            display: "inline-block",
+                          }}
+                        />
+                      )}
                     </div>
                     <div
                       style={{ fontSize: "0.775rem", color: "var(--muted)" }}
@@ -983,14 +1489,13 @@ export default function BillsPage() {
                         style={{
                           fontSize: "0.72rem",
                           color: "var(--muted)",
-                          marginTop: 2,
+                          marginTop: 1,
                         }}
                       >
-                        {bill.unitsConsumed} units consumed
+                        {bill.unitsConsumed} units
                       </div>
                     )}
                   </div>
-
                   {/* Amount + actions */}
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>
@@ -999,10 +1504,9 @@ export default function BillsPage() {
                     <div
                       style={{
                         display: "flex",
-                        gap: 6,
-                        marginTop: 6,
+                        gap: 5,
+                        marginTop: 5,
                         justifyContent: "flex-end",
-                        flexWrap: "wrap",
                       }}
                     >
                       {isManager && !bill.isSplit && (
@@ -1036,10 +1540,10 @@ export default function BillsPage() {
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 4,
+                            gap: 3,
                           }}
                         >
-                          Details{" "}
+                          Payments{" "}
                           {isExpanded ? (
                             <ChevronUp size={10} />
                           ) : (
@@ -1051,70 +1555,16 @@ export default function BillsPage() {
                   </div>
                 </div>
 
-                {/* Expanded split details */}
-                {isExpanded && splitDetails[bill._id] && (
-                  <div
-                    style={{
-                      borderTop: "1px solid var(--glass-border)",
-                      padding: "12px 18px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                    }}
-                  >
-                    {splitDetails[bill._id].map((split) => {
-                      const sc =
-                        STATUS_CONFIG[split.status] || STATUS_CONFIG.pending;
-                      const SIcon = sc.icon;
-                      return (
-                        <div
-                          key={split._id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "7px 10px",
-                            background: "var(--bg-surface)",
-                            borderRadius: 9,
-                          }}
-                        >
-                          <span style={{ fontSize: "0.82rem" }}>
-                            {split.membershipId?.userId?.name || "Member"}
-                          </span>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                                fontSize: "0.68rem",
-                                fontWeight: 600,
-                                padding: "2px 8px",
-                                borderRadius: 50,
-                                color: sc.color,
-                                background: sc.bg,
-                                border: `1px solid ${sc.border}`,
-                              }}
-                            >
-                              <SIcon size={10} />
-                              {sc.label}
-                            </span>
-                            <span
-                              style={{ fontWeight: 700, fontSize: "0.875rem" }}
-                            >
-                              {fmtCurrency(split.shareAmount, house?.currency)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                {/* Split panel */}
+                {isExpanded && bill.isSplit && (
+                  <SplitPanel
+                    bill={bill}
+                    house={house}
+                    isManager={isManager}
+                    splitDetails={splitDetails[bill._id]}
+                    loadingSplits={loadingSplits[bill._id]}
+                    onMarkPaid={(split) => setMarkPaidSplit({ split, bill })}
+                  />
                 )}
               </div>
             );
@@ -1122,66 +1572,7 @@ export default function BillsPage() {
         </div>
       )}
 
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
-    </div>
-  );
-}
-
-function BillsSkeleton() {
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              width: 80,
-              height: 22,
-              borderRadius: 6,
-              background: "var(--glass-bg-mid)",
-              marginBottom: 8,
-            }}
-            className="skeleton"
-          />
-          <div
-            style={{
-              width: 160,
-              height: 14,
-              borderRadius: 4,
-              background: "var(--glass-bg-mid)",
-            }}
-            className="skeleton"
-          />
-        </div>
-        <div
-          style={{
-            width: 100,
-            height: 36,
-            borderRadius: 50,
-            background: "var(--glass-bg-mid)",
-          }}
-          className="skeleton"
-        />
-      </div>
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          style={{
-            height: 72,
-            borderRadius: 14,
-            background: "var(--glass-bg-mid)",
-            marginBottom: 8,
-          }}
-          className="skeleton"
-        />
-      ))}
-      <style>{`.skeleton{animation:pulse 1.5s ease-in-out infinite} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes alertPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(248,113,113,.7)}50%{opacity:.85;box-shadow:0 0 0 6px rgba(248,113,113,0)}} .alert-pulse{animation:alertPulse 1.6s ease-in-out infinite} .row-overdue{border-left:3px solid #f87171!important} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );
 }

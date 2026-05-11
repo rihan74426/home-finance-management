@@ -11,8 +11,8 @@ import {
 } from "@/lib/constants";
 import { createNotification } from "@/lib/notifications";
 
-// PATCH /api/bills/[billId]/splits/[splitId]
-// Manager marks a member's share of a bill as paid (fully or partially)
+// PATCH /api/bills/[billId]/split/[splitId]
+// Manager marks a member's share of a bill as paid
 export async function PATCH(req, { params }) {
   const { userId: clerkId } = await auth();
   if (!clerkId)
@@ -45,11 +45,11 @@ export async function PATCH(req, { params }) {
       { status: 403 }
     );
 
-  const split = await BillSplit.findById(splitId).populate({
+  const split = await BillSplit.findOne({ _id: splitId, billId }).populate({
     path: "membershipId",
     populate: { path: "userId", select: "name _id" },
   });
-  if (!split || String(split.billId) !== String(billId))
+  if (!split)
     return Response.json(
       { success: false, error: "Split not found" },
       { status: 404 }
@@ -86,7 +86,7 @@ export async function PATCH(req, { params }) {
   split.status = newStatus;
   await split.save();
 
-  // Update the linked ledger entry
+  // Update linked ledger entry
   if (split.ledgerEntryId) {
     const entry = await LedgerEntry.findById(split.ledgerEntryId);
     if (entry) {
@@ -98,26 +98,88 @@ export async function PATCH(req, { params }) {
         entry.paymentMethod = paymentMethod;
       }
       if (managerNote !== undefined) entry.managerNote = managerNote;
-      // pre-save hook recalculates status
-      await entry.save();
+      await entry.save(); // pre-save hook recalculates status
     }
   }
 
   // Notify the member
   const memberUserId = split.membershipId?.userId?._id;
   if (memberUserId) {
-    const paid = newStatus === PAYMENT_STATUS.PAID;
+    const isPaid = newStatus === PAYMENT_STATUS.PAID;
     await createNotification({
       userId: memberUserId,
       houseId: bill.houseId,
-      type: paid ? NOTIFICATION_TYPE.RENT_PAID : NOTIFICATION_TYPE.BILL_DUE,
-      title: paid
+      type: isPaid ? NOTIFICATION_TYPE.RENT_PAID : NOTIFICATION_TYPE.BILL_DUE,
+      title: isPaid
         ? `Bill payment confirmed — ${bill.label || bill.type}`
         : `Partial bill payment recorded — ${bill.label || bill.type}`,
-      body: `Amount: ${amountPaid / 100}. Status: ${newStatus}.`,
+      body: `Amount paid: ${amountPaid / 100}. Status: ${newStatus}.`,
       meta: { billId, splitId },
     });
   }
+
+  return Response.json({ success: true, data: split });
+}
+
+// GET /api/bills/[billId]/split/[splitId]
+// Get a single split record
+export async function GET(req, { params }) {
+  const { userId: clerkId } = await auth();
+  if (!clerkId)
+    return Response.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+
+  await connectDB();
+  const { billId, splitId } = await params;
+
+  const user = await User.findOne({ clerkId, deletedAt: null });
+  if (!user)
+    return Response.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+
+  const bill = await Bill.findById(billId).lean();
+  if (!bill)
+    return Response.json(
+      { success: false, error: "Bill not found" },
+      { status: 404 }
+    );
+
+  const membership = await Membership.findOne({
+    userId: user._id,
+    houseId: bill.houseId,
+    isActive: true,
+  });
+  if (!membership)
+    return Response.json(
+      { success: false, error: "Not a member" },
+      { status: 403 }
+    );
+
+  const split = await BillSplit.findOne({ _id: splitId, billId })
+    .populate({
+      path: "membershipId",
+      populate: { path: "userId", select: "name avatarUrl" },
+    })
+    .lean();
+
+  if (!split)
+    return Response.json(
+      { success: false, error: "Split not found" },
+      { status: 404 }
+    );
+
+  // Members can only see their own split
+  const isManager = await Membership.isManager(user._id, bill.houseId);
+  const isOwn = String(split.membershipId?._id) === String(membership._id);
+  if (!isManager && !isOwn)
+    return Response.json(
+      { success: false, error: "Forbidden" },
+      { status: 403 }
+    );
 
   return Response.json({ success: true, data: split });
 }

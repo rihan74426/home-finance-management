@@ -1,8 +1,8 @@
-# 🏠 Homy — The Household Operating System
+# 🏠 Homify — The Household Operating System
 
-> *"Your home, finally organized."*
+> _"Your home, finally organized."_
 
-Homy is a unified household management platform for people who share a living space — flatmates, families, rental tenants, co-living residents. It handles everything from rent tracking to chore assignment, shared bills to household chat, WiFi passwords to grocery lists. Built for Asia first, designed for the world.
+Homify is a unified household management platform for people who share a living space — flatmates, families, rental tenants, co-living residents. It handles everything from rent tracking to chore assignment, shared bills to household chat, WiFi passwords to grocery lists. Built for Asia first, designed for the world.
 
 ---
 
@@ -12,7 +12,7 @@ Homy is a unified household management platform for people who share a living sp
 2. [The Problem We Solve](#the-problem-we-solve)
 3. [Product Feature Blueprint](#product-feature-blueprint)
 4. [Tech Stack](#tech-stack)
-5. [Migration Plan (EquiFlow → Homy)](#migration-plan)
+5. [Migration Plan (EquiFlow → Homify)](#migration-plan)
 6. [Architecture Overview](#architecture-overview)
 7. [Data Model Summary](#data-model-summary)
 8. [Monetization Strategy](#monetization-strategy)
@@ -27,11 +27,11 @@ Homy is a unified household management platform for people who share a living sp
 
 ## The Vision
 
-Homy is not a budgeting app. It is not a chat app. It is not a task manager.
+Homify is not a budgeting app. It is not a chat app. It is not a task manager.
 
-It is the **operating system for a shared home** — a single place where everyone who lives together can coordinate, share, pay, remember, and connect. The way WhatsApp became the default for family communication, Homy becomes the default for household management.
+It is the **operating system for a shared home** — a single place where everyone who lives together can coordinate, share, pay, remember, and connect. The way WhatsApp became the default for family communication, Homify becomes the default for household management.
 
-The emotional promise: **less friction, more harmony.** When people share space without clear systems, resentment builds. Homy removes the friction — who owes what, who forgot the task, who has the WiFi password — quietly, in the background, so people can just live.
+The emotional promise: **less friction, more harmony.** When people share space without clear systems, resentment builds. Homify removes the friction — who owes what, who forgot the task, who has the WiFi password — quietly, in the background, so people can just live.
 
 ---
 
@@ -39,17 +39,18 @@ The emotional promise: **less friction, more harmony.** When people share space 
 
 ### What people actually say (from Reddit, Facebook groups, Twitter/X):
 
-> *"My flatmate keeps 'forgetting' to pay their share of electricity."* — r/AskUK
+> _"My flatmate keeps 'forgetting' to pay their share of electricity."_ — r/AskUK
 
-> *"We have the WiFi password written on a sticky note that's been on the fridge for 2 years."* — Facebook flatmate group, Dhaka
+> _"We have the WiFi password written on a sticky note that's been on the fridge for 2 years."_ — Facebook flatmate group, Dhaka
 
-> *"I hate being the one who always has to ask about rent. It makes me feel like a debt collector."* — r/badroommates
+> _"I hate being the one who always has to ask about rent. It makes me feel like a debt collector."_ — r/badroommates
 
-> *"Our house WhatsApp group has 4,000 messages. Nobody can find the lease agreement."* — Twitter/X, Mumbai
+> _"Our house WhatsApp group has 4,000 messages. Nobody can find the lease agreement."_ — Twitter/X, Mumbai
 
-> *"My landlord sends WhatsApp voice notes at midnight about water bills."* — Reddit, Karachi
+> _"My landlord sends WhatsApp voice notes at midnight about water bills."_ — Reddit, Karachi
 
 **The core pain points:**
+
 - Money awkwardness between people who live together
 - Critical information scattered across WhatsApp, Notes apps, paper
 - No shared accountability for household tasks
@@ -57,15 +58,16 @@ The emotional promise: **less friction, more harmony.** When people share space 
 - Tenants with no record of what they paid and when
 
 ### Why existing tools fail:
-| Tool | Fails because |
-|------|---------------|
-| WhatsApp | No structure, everything gets buried |
-| Splitwise | Roommate math, not household harmony |
-| Google Sheets | Too much effort, breaks down |
-| Notion | Too complex for non-technical users |
-| Excel | Not mobile-first, no real-time collaboration |
 
-**Homy fills the gap**: structured enough to be useful, simple enough that your least tech-savvy flatmate will actually use it.
+| Tool          | Fails because                                |
+| ------------- | -------------------------------------------- |
+| WhatsApp      | No structure, everything gets buried         |
+| Splitwise     | Roommate math, not household harmony         |
+| Google Sheets | Too much effort, breaks down                 |
+| Notion        | Too complex for non-technical users          |
+| Excel         | Not mobile-first, no real-time collaboration |
+
+**Homify fills the gap**: structured enough to be useful, simple enough that your least tech-savvy flatmate will actually use it.
 
 ---
 
@@ -73,24 +75,27 @@ The emotional promise: **less friction, more harmony.** When people share space 
 
 ### Core Concept: The House
 
-Everything in Homy is organized around a **House**. One house, multiple members, one manager (Head of House). Members join by invite. The house has rooms, a ledger, a vault, a board, and a chat.
+Everything in Homify is organized around a **House**. One house, multiple members, one manager (Head of House). Members join by invite. The house has rooms, a ledger, a vault, a board, and a chat.
 
 ---
 
 ### A. House Setup & Access
 
 **House Creation:**
+
 - Create a house with a name, address, and type (flat, villa, family home, co-living)
 - Manager role is assigned to creator
 - Invite members via phone number (SMS), email, or shareable link
 - Optional: set house avatar/photo
 
 **Member Roles:**
+
 - `Manager` — full access, can assign tasks, log rent, manage vault
 - `Member` — standard access, personal ledger view, shared features
 - `Guest` — read-only temporary access (useful for maintenance visits)
 
 **Onboarding Flow:**
+
 1. Sign up with phone or email (Clerk auth)
 2. Create a house OR accept an invite
 3. Brief setup: who pays rent? what's the billing cycle?
@@ -103,22 +108,26 @@ Everything in Homy is organized around a **House**. One house, multiple members,
 The most critical feature for South Asian and developing markets.
 
 **Manager Dashboard:**
+
 - Log rent paid by each member (amount, date, method: cash/bKash/Nagad/UPI/bank)
 - Mark as partial, pending, or fully paid
 - Add private notes (e.g., "Said he'll pay the rest by the 15th")
 - See at a glance: who's paid, who hasn't, total collected vs. expected
 
 **Auto-Reminders:**
+
 - Push notification + in-app message 3 days before rent due
 - Day-of reminder if unpaid
 - Manager gets notified when a member marks themselves as paid (pending manager confirmation)
 
 **Rent History:**
+
 - Full ledger per member
 - PDF export for each member's payment history (legal/rental record use)
 - Manager can export full house ledger as PDF
 
 **Bill Tracking (Beyond Rent):**
+
 - Electricity, gas, water, internet, building maintenance fee
 - Split equally or custom per member
 - Track who paid what portion
@@ -126,6 +135,7 @@ The most critical feature for South Asian and developing markets.
 - Payment status: pending / partial / paid
 
 **Electricity Meter Tracking:**
+
 - Log meter readings (start + end of month)
 - Auto-calculate units used and estimated cost
 - Works even without a smart meter
@@ -137,6 +147,7 @@ The most critical feature for South Asian and developing markets.
 Secure, organized, shared reference storage. Replaces the sticky note on the fridge.
 
 **Vault Items:**
+
 - WiFi credentials (name + password, tap to copy)
 - Door lock codes / key safe combinations
 - Intercom or gate codes
@@ -147,6 +158,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 - Appliance manuals and warranty info
 
 **Access Control:**
+
 - Manager decides which vault items are shared with all vs. manager-only
 - E.g., landlord's personal number = manager-only; WiFi = all members
 
@@ -155,6 +167,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ### D. Tasks & Chores
 
 **Task Board:**
+
 - Create tasks with title, description, due date
 - Assign to a specific member or leave unassigned (anyone can pick up)
 - Priority levels: low / normal / urgent
@@ -162,12 +175,14 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 - Categories: cleaning, grocery, maintenance, payment, admin, other
 
 **Task Gamification (Nudge System):**
+
 - Overdue tasks send a friendly "nudge" to the assigned member
 - House-level streak counter: "Your house has completed 7 tasks in a row!"
 - Weekly digest: who completed the most tasks this week
 - No public shaming — private nudges only, positive reinforcement publicly
 
 **Task Roulette:**
+
 - Manager can spin the roulette to randomly assign unassigned chores
 - Useful for: cleaning schedule, cooking rotation, grocery run
 
@@ -176,6 +191,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ### E. Grocery & Shopping Lists
 
 **Shared List:**
+
 - Any member can add items
 - One-tap to mark as bought
 - Categorized: dairy, vegetables, household supplies, etc.
@@ -183,6 +199,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 - Recurring items: auto-add weekly staples
 
 **Smart Suggestions:**
+
 - Based on previous lists, suggest items not added this week
 - "You usually add eggs on Sundays — add them?"
 
@@ -191,6 +208,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ### F. Household Chat
 
 **Thread-Based Chat (not one big group):**
+
 - Default threads: General, Rent & Bills, Groceries, Maintenance
 - Create custom threads: "Rooftop Party Planning", "AC Problem"
 - Attach images, documents
@@ -198,12 +216,14 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 - Pin important messages
 
 **Polls:**
+
 - Create quick polls inside any thread
 - "Should we get a new kettle?" → Yes / No
 - "Who cooks Friday?" → Name selection
 - Results visible to all, deadline optional
 
 **Announcements:**
+
 - Manager can post pinned announcements
 - All members notified immediately
 - Cannot be dismissed until read
@@ -213,12 +233,14 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ### G. Meetings & Scheduling
 
 **House Meetings:**
+
 - Schedule a meeting (date, time, agenda)
 - All members notified
 - RSVP: attending / not attending / maybe
 - Meeting notes can be posted after
 
 **Maintenance Scheduling:**
+
 - Log when maintenance is booked (electrician, plumber, cleaner)
 - Notify all members ("Plumber coming Tuesday 10am–12pm")
 - History of past maintenance visits
@@ -228,6 +250,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ### H. Personal Profile & Member Cards
 
 **Each member has:**
+
 - Profile photo, name, room/unit number (optional)
 - Move-in date
 - Rent amount assigned
@@ -236,26 +259,28 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 - Contact: phone, preferred payment method
 
 **Member visibility settings:**
+
 - Members can hide their phone number from other members (manager always sees)
 
 ---
 
 ### I. Notifications (Smart, Not Spammy)
 
-| Trigger | Who gets notified |
-|---------|------------------|
-| Rent due in 3 days | Member |
-| Rent marked as paid | Manager |
-| New task assigned | Assigned member |
-| Task overdue 24h | Assigned member (nudge) |
-| New poll posted | All members |
-| New announcement | All members |
-| Bill split updated | All affected members |
-| New vault item | All members |
-| Meeting scheduled | All members |
-| Maintenance scheduled | All members |
+| Trigger               | Who gets notified       |
+| --------------------- | ----------------------- |
+| Rent due in 3 days    | Member                  |
+| Rent marked as paid   | Manager                 |
+| New task assigned     | Assigned member         |
+| Task overdue 24h      | Assigned member (nudge) |
+| New poll posted       | All members             |
+| New announcement      | All members             |
+| Bill split updated    | All affected members    |
+| New vault item        | All members             |
+| Meeting scheduled     | All members             |
+| Maintenance scheduled | All members             |
 
 **Notification controls:**
+
 - Each member can mute specific threads or notification types
 - Quiet hours setting (no pings after 10pm unless urgent)
 
@@ -277,6 +302,7 @@ Secure, organized, shared reference storage. Replaces the sticky note on the fri
 ## Tech Stack
 
 ### Web Application
+
 ```
 Framework:        Next.js 14+ (App Router)
 Language:         TypeScript
@@ -289,6 +315,7 @@ PDF Generation:   Puppeteer or @react-pdf/renderer
 ```
 
 ### Backend / API
+
 ```
 Runtime:          Node.js
 Framework:        Express.js
@@ -304,6 +331,7 @@ Storage:          AWS S3 or Cloudflare R2
 ```
 
 ### Mobile Apps (Phase 2)
+
 ```
 Framework:        React Native (Expo)
 Shared logic:     Shared API layer (same backend)
@@ -312,6 +340,7 @@ Push:             Expo Notifications + FCM
 ```
 
 ### Infrastructure
+
 ```
 Hosting (Web):    Vercel (Next.js) + Railway/Render (API)
 Database:         MongoDB Atlas
@@ -324,9 +353,10 @@ Analytics:        PostHog (privacy-friendly)
 
 ## Migration Plan
 
-### From: Current EquiFlow (Vite + React) → Homy (Next.js 14)
+### From: Current EquiFlow (Vite + React) → Homify (Next.js 14)
 
 **Why Next.js over continuing with Vite + React:**
+
 - Server-side rendering = better SEO for landing pages
 - API routes = simpler architecture for small team
 - App Router = better file-based routing
@@ -337,44 +367,52 @@ Analytics:        PostHog (privacy-friendly)
 **Migration Steps:**
 
 #### Step 1 — New Repository Setup (Week 1)
+
 ```bash
-npx create-next-app@latest homy --typescript --tailwind --app
+npx create-next-app@latest homify --typescript --tailwind --app
 ```
+
 - Set up folder structure (see Architecture section)
 - Install shadcn/ui components
 - Configure Clerk auth
 - Set up MongoDB connection
 
 #### Step 2 — Move Marketing Content (Week 1)
+
 - Port the landing page sections from current React components to Next.js pages
 - Hero, About, Features, Pricing, FAQ, Contact
-- Update config.ts with Homy branding
-- Replace EquiFlow content with Homy content
+- Update config.ts with Homify branding
+- Replace EquiFlow content with Homify content
 
 #### Step 3 — Auth System (Week 2)
+
 - Clerk setup: email + phone sign-up
 - Webhook: sync Clerk user to MongoDB
 - Protected routes middleware
 - User profile page
 
 #### Step 4 — House & Member System (Week 3–4)
+
 - Create House flow
 - Invite system (email + SMS)
 - Member management
 - Role system
 
 #### Step 5 — Core Features (Month 2–3)
+
 - Rent & Ledger
 - Vault
 - Tasks
 - Grocery List
 
 #### Step 6 — Social Features (Month 3–4)
+
 - Chat with Socket.io
 - Polls
 - Announcements
 
 #### Step 7 — Mobile (Month 5–8)
+
 - Expo React Native app
 - Shared API
 - Push notifications
@@ -384,7 +422,7 @@ npx create-next-app@latest homy --typescript --tailwind --app
 ## Architecture Overview
 
 ```
-homy/
+homify/
 ├── apps/
 │   ├── web/                    # Next.js 14 web app
 │   │   ├── app/
@@ -447,9 +485,10 @@ homy/
 
 ## Data Model Summary
 
-*(Full schema design is the next phase — this is the high-level map)*
+_(Full schema design is the next phase — this is the high-level map)_
 
 **Collections:**
+
 - `users` — Clerk-synced user profiles
 - `houses` — House entity + settings
 - `memberships` — User ↔ House relationship + role + rent amount
@@ -476,6 +515,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 ### Tier Structure
 
 **Free — "Starter House"**
+
 - 1 house, up to 6 members
 - Rent tracking (basic)
 - Task board
@@ -484,7 +524,8 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - Chat (1 general thread)
 - No PDF exports
 
-**Pro — "Homy+" (BDT 199/PKR 800/INR 149 per house/month)**
+**Pro — "Homify+" (BDT 199/PKR 800/INR 149 per house/month)**
+
 - Unlimited members
 - Full ledger + PDF exports
 - Unlimited vault items + file attachments
@@ -495,6 +536,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - Priority support
 
 **Manager Pro — (BDT 499/PKR 2000/INR 399 per manager/month)**
+
 - Manage up to 10 houses (landlord/property manager use case)
 - Full rent ledger with PDF per tenant
 - WhatsApp reminder integration
@@ -504,6 +546,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 ### Additional Revenue Streams
 
 **1. Local Service Referrals (High potential for BD/PK/IN)**
+
 - "Need a plumber? We know one in your area."
 - Partner with local electricians, plumbers, AC technicians, cleaners
 - Commission model: 10–20% of service booking value
@@ -511,27 +554,32 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - Works like a local marketplace inside the app
 
 **2. Digital Payment Integration**
+
 - bKash/Nagad partner (Bangladesh)
 - JazzCash/EasyPaisa partner (Pakistan)
 - UPI integration (India)
 - Collect rent digitally through the app → earn transaction fee (0.5–1%)
 
 **3. Grocery Affiliate**
+
 - Shajgoj, Chaldal, Meena Click (BD), Daraz — affiliate links on grocery list
 - "Add to cart on Chaldal" from the shared list
 - Affiliate commission on orders
 
 **4. Premium Integrations**
+
 - WhatsApp Business API for automated rent reminders
 - PDF generator for legal-grade receipts
 - Advanced analytics for property managers
 
 **5. Co-Living / Property Manager SaaS (Long term)**
+
 - White-label for co-living operators (50+ rooms)
 - Enterprise pricing
 - Custom branding
 
 ### Anti-pressure Principles
+
 - No dark patterns (no fake urgency, no countdown timers on pricing)
 - Free tier is genuinely useful — not crippled
 - Upgrades suggested contextually, not with pop-ups
@@ -545,6 +593,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 ### Phase 1: Bangladesh & Pakistan (Months 1–6)
 
 **Why BD + PK first:**
+
 - High smartphone penetration
 - Active Facebook & WhatsApp usage (familiar with mobile-first apps)
 - Strong rental market in Dhaka, Chittagong, Karachi, Lahore
@@ -553,6 +602,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - Strong diaspora networks that will spread word internationally
 
 **BD Launch Strategy:**
+
 - Facebook groups: "Dhaka Flat Share", "Bashundhara Residents", university groups
 - University dormitory partnerships (BUET, DU, NSU, BRAC)
 - Local tech blogs and YouTubers
@@ -560,21 +610,24 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - WhatsApp broadcast lists for flatmate communities
 
 **PK Launch Strategy:**
+
 - Twitter/X (heavily used by urban Pakistan)
 - University channels (LUMS, IBA, NED)
 - Locally relevant payment: JazzCash/EasyPaisa integration from day 1
 
 **India Launch:**
+
 - Follows BD + PK (Month 6–12)
 - LinkedIn for urban professionals (Bangalore, Mumbai, Delhi)
 - PG/hostel owner communities
 - Integration with UPI from day 1
 
 ### Content Strategy
+
 - "How to manage a flathouse without fighting" — blog
 - "The rent conversation you dread" — emotional content
-- "WhatsApp vs Homy for managing your house" — comparison content
-- Short-form videos: problem scenarios (flatmate forgot rent → Homy solves it)
+- "WhatsApp vs Homify for managing your house" — comparison content
+- Short-form videos: problem scenarios (flatmate forgot rent → Homify solves it)
 - User-generated content: "Show us your messy rent spreadsheet, we'll fix it"
 
 ---
@@ -582,6 +635,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 ## Roadmap
 
 ### Phase 1 — Foundation (Months 1–3)
+
 **Goal: Functional product, first 100 houses**
 
 - [x] Next.js + Clerk + MongoDB setup
@@ -592,11 +646,12 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [x] Basic grocery list
 - [x] Simple chat (general thread only)
 - [x] Push notifications
-- [x] Landing page (Homy branding)
+- [x] Landing page (Homify branding)
 - [x] Deploy: Vercel + Railway
 - [x] Beta launch: 50 houses in BD/PK via direct outreach
 
 ### Phase 2 — Engagement (Months 3–6)
+
 **Goal: 1,000 active houses, first revenue**
 
 - [x] Bill splitting and electricity tracker
@@ -610,6 +665,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [x] Mobile-optimized PWA
 
 ### Phase 3 — Mobile (Months 5–8)
+
 **Goal: App Store + Play Store launch**
 
 - [ ] React Native (Expo) app
@@ -620,6 +676,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [ ] App Store (iOS) + Play Store (Android) launch
 
 ### Phase 4 — Monetization (Months 6–12)
+
 **Goal: Revenue positive**
 
 - [ ] Manager Pro tier
@@ -630,6 +687,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [ ] 100 paying houses
 
 ### Phase 5 — India & Southeast Asia (Year 2)
+
 **Goal: 10,000 active houses**
 
 - [ ] UPI integration
@@ -639,6 +697,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [ ] Philippines pilot
 
 ### Phase 6 — Europe & Australia (Year 2–3)
+
 **Goal: Western market entry**
 
 - [ ] GDPR compliance
@@ -654,17 +713,17 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 
 ### The Home Intelligence Layer
 
-As Homy accumulates household data (what people buy, how they pay, what breaks, who they live with), it becomes the intelligence layer of domestic life.
+As Homify accumulates household data (what people buy, how they pay, what breaks, who they live with), it becomes the intelligence layer of domestic life.
 
 **Predictive maintenance:** "Your water heater logs show usage spikes — it typically fails after 6 years. Yours is 5.5 years old. Want a pre-emptive checkup?"
 
 **Community-level insights:** "In your area, electricity bills went up 18% this month. Here's how your house compares."
 
-**Housing marketplace:** Connect outgoing tenants with incoming ones. The house profile is already built. Homy becomes a trusted rental intermediary.
+**Housing marketplace:** Connect outgoing tenants with incoming ones. The house profile is already built. Homify becomes a trusted rental intermediary.
 
 **Property management SaaS:** A white-label platform for property managers who manage 50–500 units. The same engine, scaled up with commercial reporting.
 
-**Homy Concierge (Premium tier):** A real human who handles your rent reminders, handles maintenance booking, and manages your house admin for you. A service layer on top of the software.
+**Homify Concierge (Premium tier):** A real human who handles your rent reminders, handles maintenance booking, and manages your house admin for you. A service layer on top of the software.
 
 **Smart home integration:** Integrate with smart locks (August, Yale), smart meters (if available), and IoT devices. "Your front door was unlocked for 2 hours — was that intentional?"
 
@@ -675,18 +734,21 @@ As Homy accumulates household data (what people buy, how they pay, what breaks, 
 ## Marketing Policy
 
 ### Brand Voice
+
 - Warm, practical, gently funny
 - Never preachy about money
 - Speaks to the person who has to "deal with the house stuff"
 - Multilingual: English primary, Bengali/Urdu/Hindi versions planned
 
 ### Key Messages
+
 1. "Stop being the group chat admin. Be the house manager."
 2. "Rent paid? Tracked. WiFi password? Saved. Chores done? Finally."
 3. "One app. Everything your house needs."
-4. "No awkward money conversations. Homy handles it."
+4. "No awkward money conversations. Homify handles it."
 
 ### Channels (Priority Order)
+
 1. WhatsApp word-of-mouth (BD/PK)
 2. Facebook groups (South Asian urban communities)
 3. University campus outreach
@@ -701,16 +763,17 @@ As Homy accumulates household data (what people buy, how they pay, what breaks, 
 ## Pricing Strategy
 
 ### Pricing Philosophy
+
 Price in **local currency at local purchasing power**. A product priced at USD 8/month is accessible in the US but a barrier in Bangladesh.
 
-| Market | Free | Pro (House) | Manager Pro |
-|--------|------|-------------|-------------|
-| Bangladesh | Free | BDT 199/mo | BDT 499/mo |
-| Pakistan | Free | PKR 800/mo | PKR 2,000/mo |
-| India | Free | INR 149/mo | INR 399/mo |
-| UK | Free | £3.99/mo | £9.99/mo |
-| Australia | Free | AUD 5.99/mo | AUD 14.99/mo |
-| US/EU | Free | USD 4.99/mo | USD 11.99/mo |
+| Market     | Free | Pro (House) | Manager Pro  |
+| ---------- | ---- | ----------- | ------------ |
+| Bangladesh | Free | BDT 199/mo  | BDT 499/mo   |
+| Pakistan   | Free | PKR 800/mo  | PKR 2,000/mo |
+| India      | Free | INR 149/mo  | INR 399/mo   |
+| UK         | Free | £3.99/mo    | £9.99/mo     |
+| Australia  | Free | AUD 5.99/mo | AUD 14.99/mo |
+| US/EU      | Free | USD 4.99/mo | USD 11.99/mo |
 
 **Annual discount:** 2 months free (16% off)
 **Student plan:** 50% off with valid .edu email
@@ -738,6 +801,7 @@ Price in **local currency at local purchasing power**. A product priced at USD 8
    - Both simultaneous
 
 ### React Native Tech Choices
+
 - **Expo SDK 51+** — managed workflow for faster development
 - **Expo Router** — file-based navigation (mirrors Next.js App Router)
 - **NativeWind** — Tailwind for React Native
@@ -752,8 +816,8 @@ Price in **local currency at local purchasing power**. A product priced at USD 8
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/homy
-cd homy
+git clone https://github.com/yourusername/homify
+cd homify
 
 # Install dependencies (monorepo)
 npm install
@@ -788,9 +852,9 @@ See `CLAUDE.md` for full progress tracking and current todos.
 
 ---
 
-*Built for the people who send "did anyone pay the electricity bill?" into the void of a WhatsApp group and wait.*
+_Built for the people who send "did anyone pay the electricity bill?" into the void of a WhatsApp group and wait._
 
-# CLAUDE.md — HOMY SESSION MEMORY
+# CLAUDE.md — HOMify SESSION MEMORY
 
 > Read this file first at the start of every session.
 > Update the "Last Session" section before ending every session.
@@ -799,7 +863,7 @@ See `CLAUDE.md` for full progress tracking and current todos.
 
 ## PROJECT IDENTITY
 
-- **Product:** Homy — "Your home, finally organized"
+- **Product:** Homify — "Your home, finally organized"
 - **Type:** Household management SaaS (web + mobile)
 - **Stack:** Next.js 14 App Router, JavaScript, MongoDB/Mongoose, Clerk auth, Tailwind CSS
 - **Target:** Shared households — flatmates, families, co-living — South/Southeast Asia first
@@ -985,21 +1049,21 @@ VaultItem, Task, GroceryItem, Thread (+ Message), Poll, Invite
 | Bug fix session | Middleware rename, Mongoose hook fix, emoji removal, nav routing fix |
 | Latest session  | Grocery + Chat real implementations, architecture docs               |
 
-# HOMY — MASTER ARCHITECTURE DOCUMENT
+# HOMify — MASTER ARCHITECTURE DOCUMENT
 
 > Last updated: April 2026 | Status: Active Development | Phase: 1 → 2
 
 ---
 
-## 1. WHAT HOMY IS (AND ISN'T)
+## 1. WHAT HOMify IS (AND ISN'T)
 
-Homy is not a bill-splitting app. It is not a task manager. It is not a chat app.
+Homify is not a bill-splitting app. It is not a task manager. It is not a chat app.
 
-It is the **operating system for a shared home** — the single source of truth for every person who lives under one roof together. Think of it the way Slack is for teams: before Slack, teams used email + spreadsheets + phone calls. After Slack, those still exist but the team's _coordination layer_ lives in one place. Homy is that coordination layer for households.
+It is the **operating system for a shared home** — the single source of truth for every person who lives under one roof together. Think of it the way Slack is for teams: before Slack, teams used email + spreadsheets + phone calls. After Slack, those still exist but the team's _coordination layer_ lives in one place. Homify is that coordination layer for households.
 
-**The insight competitors miss:** Splitwise, Tricount, and every bill-splitter treats shared living as a _financial problem_. But the actual problem is _relationship friction_. When someone doesn't pay rent, the issue isn't accounting — it's that their housemate has to become a debt collector. Homy's job is to remove that friction entirely, before it becomes a conversation.
+**The insight competitors miss:** Splitwise, Tricount, and every bill-splitter treats shared living as a _financial problem_. But the actual problem is _relationship friction_. When someone doesn't pay rent, the issue isn't accounting — it's that their housemate has to become a debt collector. Homify's job is to remove that friction entirely, before it becomes a conversation.
 
-**What makes Homy structurally different from every competitor:**
+**What makes Homify structurally different from every competitor:**
 
 | App             | What they solve     | What they miss                                         |
 | --------------- | ------------------- | ------------------------------------------------------ |
@@ -1010,7 +1074,7 @@ It is the **operating system for a shared home** — the single source of truth 
 | WhatsApp groups | Communication       | No structure, no memory, everything gets buried        |
 | Google Sheets   | Tracking            | Manual, breaks down, not real-time                     |
 
-**Homy's moat:** It covers the full stack of shared living (money + tasks + information + communication) in one place, built mobile-first for South/Southeast Asian markets where no quality option exists, priced at local purchasing power parity.
+**Homify's moat:** It covers the full stack of shared living (money + tasks + information + communication) in one place, built mobile-first for South/Southeast Asian markets where no quality option exists, priced at local purchasing power parity.
 
 ---
 
@@ -1024,7 +1088,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - Renting a flat with 2–4 others
 - They became the "house manager" by default (first to sign the lease, most organized)
 - Pain: collecting rent from flatmates is awkward; tracking who paid what is mental overhead
-- They will pay for Homy if it makes the money conversation go away
+- They will pay for Homify if it makes the money conversation go away
 - Acquisition: Facebook flat-share groups, university WhatsApp groups
 
 **Persona B — The Professional Flatmate**
@@ -1032,7 +1096,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - 24–35, working professional in Dhaka, Karachi, Bangalore
 - Joined an existing shared flat or co-living space
 - Pain: feels anxious about money disputes; wants transparency without confrontation
-- They will adopt Homy if their manager uses it (pull adoption)
+- They will adopt Homify if their manager uses it (pull adoption)
 - Acquisition: invite from manager
 
 **Persona C — The Landlord/Building Manager**
@@ -1091,7 +1155,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - Expensive ($20–50/month) — wrong price point for emerging markets
 - US/UK centric — no bKash, no UPI, no JazzCash
 
-### Whitespace Homy Owns
+### Whitespace Homify Owns
 
 1. **Tenant-side household management** — managers AND members both have a great experience
 2. **South/Southeast Asia first** — language, payment methods, cultural context
@@ -1133,7 +1197,7 @@ Analytics          PostHog                 Privacy-friendly, self-hostable
 ### 4.2 Repository Structure
 
 ```
-homy/
+homify/
 ├── src/
 │   ├── app/
 │   │   ├── (marketing)/           # Landing page, pricing, blog
@@ -1455,13 +1519,13 @@ IDs:            MongoDB ObjectId, always string in JSON
 
 _This document is the source of truth for system design. Update it when architecture changes._
 
-# Homy — Complete Project Summary
+# Homify — Complete Project Summary
 
-## What is Homy?
+## What is Homify?
 
-Homy is a **household operating system** — a single app where everyone in a shared home manages rent, bills, tasks, groceries, important info, and house chat. Built for people who share a living space: flatmates, tenants, families, co-living residents.
+Homify is a **household operating system** — a single app where everyone in a shared home manages rent, bills, tasks, groceries, important info, and house chat. Built for people who share a living space: flatmates, tenants, families, co-living residents.
 
-The core insight: **managing a shared home creates daily friction** — the awkward rent reminder, the WiFi password nobody can find, the cleaning argument, the electricity bill nobody tracked. Homy removes all of it quietly, so people can just live.
+The core insight: **managing a shared home creates daily friction** — the awkward rent reminder, the WiFi password nobody can find, the cleaning argument, the electricity bill nobody tracked. Homify removes all of it quietly, so people can just live.
 
 ---
 

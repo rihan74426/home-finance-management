@@ -12,6 +12,8 @@ import {
   Clock,
   AlertCircle,
   Download,
+  Check,
+  DollarSign,
 } from "lucide-react";
 import { PAYMENT_METHOD } from "@/lib/constants";
 import { LedgerSkeleton } from "@/components/ui/Skeleton";
@@ -71,7 +73,6 @@ function fmtCurrency(amount, currency) {
     return `${amount / 100}`;
   }
 }
-
 function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-US", {
     month: "short",
@@ -79,6 +80,27 @@ function fmtDate(d) {
     year: "numeric",
   });
 }
+
+const iS = {
+  width: "100%",
+  background: "var(--glass-bg)",
+  border: "1px solid var(--glass-border)",
+  borderRadius: 10,
+  padding: "9px 13px",
+  color: "var(--text)",
+  fontSize: "0.875rem",
+  outline: "none",
+  boxSizing: "border-box",
+};
+const lS = {
+  display: "block",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  color: "var(--muted)",
+  marginBottom: 5,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
 
 function StatusBadge({ status }) {
   const c = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
@@ -103,26 +125,157 @@ function StatusBadge({ status }) {
   );
 }
 
-const inputStyle = {
-  width: "100%",
-  background: "var(--glass-bg)",
-  border: "1px solid var(--glass-border)",
-  borderRadius: 10,
-  padding: "9px 13px",
-  color: "var(--text)",
-  fontSize: "0.875rem",
-  outline: "none",
-  boxSizing: "border-box",
-};
-const labelStyle = {
-  display: "block",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  color: "var(--muted)",
-  marginBottom: 5,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
+// Inline mark-as-paid panel (shown below the entry row)
+function MarkPaidPanel({ entry, house, onSave, onCancel }) {
+  const remaining = Math.max(0, entry.amountDue - entry.amountPaid);
+  const [amountPaid, setAmountPaid] = useState(String(remaining / 100));
+  const [paymentMethod, setPaymentMethod] = useState(
+    entry.paymentMethod || "cash"
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const paid = Math.round(parseFloat(amountPaid) * 100);
+    if (isNaN(paid) || paid < 0) {
+      toast.error("Enter a valid amount.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/houses/${entry.houseId}/ledger/${entry._id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amountPaid: entry.amountPaid + paid,
+            paymentMethod,
+          }),
+        }
+      );
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error);
+        return;
+      }
+      toast.success("Payment updated.");
+      onSave(json.data);
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSave}
+      style={{
+        padding: "12px 18px",
+        background: "var(--bg-surface)",
+        borderTop: "1px solid var(--glass-border)",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 10,
+        alignItems: "flex-end",
+      }}
+    >
+      <div style={{ flex: "1 1 140px" }}>
+        <label style={lS}>Amount received ({house?.currency})</label>
+        <input
+          style={iS}
+          type="number"
+          min="0"
+          step="0.01"
+          value={amountPaid}
+          onChange={(e) => setAmountPaid(e.target.value)}
+        />
+      </div>
+      <div style={{ flex: "1 1 140px" }}>
+        <label style={lS}>Method</label>
+        <select
+          style={{ ...iS, cursor: "pointer" }}
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+        >
+          {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 7,
+          alignItems: "center",
+          paddingBottom: 1,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setAmountPaid(String(remaining / 100))}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            background: "var(--teal-dim)",
+            border: "1px solid var(--teal-border)",
+            color: "var(--teal)",
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Full ({fmtCurrency(remaining, house?.currency)})
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 8,
+            background: saving ? "var(--glass-bg-mid)" : "var(--accent)",
+            color: saving ? "var(--muted)" : "#fff",
+            fontWeight: 700,
+            fontSize: "0.8rem",
+            border: "none",
+            cursor: saving ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {saving ? (
+            <Loader2
+              size={13}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+          ) : (
+            <Check size={13} />
+          )}
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: "8px",
+            borderRadius: 8,
+            background: "none",
+            border: "1px solid var(--glass-border)",
+            color: "var(--muted)",
+            cursor: "pointer",
+          }}
+        >
+          <X size={13} />
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export default function LedgerPage() {
   const { houseId } = useParams();
@@ -134,6 +287,7 @@ export default function LedgerPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [expandedEntry, setExpandedEntry] = useState(null); // entryId with mark-paid panel open
 
   const [form, setForm] = useState({
     membershipId: "",
@@ -147,6 +301,7 @@ export default function LedgerPage() {
     memberNote: "",
     managerNote: "",
   });
+  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
     async function load() {
@@ -171,10 +326,6 @@ export default function LedgerPage() {
     load();
   }, [houseId]);
 
-  function setF(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     if (
@@ -184,7 +335,7 @@ export default function LedgerPage() {
       !form.periodEnd ||
       !form.dueDate
     ) {
-      toast.error("Please fill in all required fields.");
+      toast.error("Fill in all required fields.");
       return;
     }
     setSubmitting(true);
@@ -217,9 +368,9 @@ export default function LedgerPage() {
         memberNote: "",
         managerNote: "",
       });
-      toast.success("Payment logged successfully.");
+      toast.success("Payment logged.");
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error("Network error.");
     } finally {
       setSubmitting(false);
     }
@@ -233,8 +384,8 @@ export default function LedgerPage() {
         : `/api/houses/${houseId}/ledger/export`;
       const res = await fetch(url);
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        toast.error(json.error || "Export failed.");
+        const j = await res.json().catch(() => ({}));
+        toast.error(j.error || "Export failed.");
         return;
       }
       const blob = await res.blob();
@@ -244,12 +395,19 @@ export default function LedgerPage() {
       link.download = cd.match(/filename="(.+?)"/)?.[1] || "ledger.pdf";
       link.click();
       URL.revokeObjectURL(link.href);
-      toast.success("Ledger exported as PDF.");
+      toast.success("Exported as PDF.");
     } catch {
-      toast.error("Export failed. Please try again.");
+      toast.error("Export failed.");
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleEntrySaved(updatedEntry) {
+    setEntries((p) =>
+      p.map((e) => (e._id === updatedEntry._id ? updatedEntry : e))
+    );
+    setExpandedEntry(null);
   }
 
   if (loading) return <LedgerSkeleton />;
@@ -257,9 +415,13 @@ export default function LedgerPage() {
   const totalDue = entries.reduce((s, e) => s + (e.amountDue || 0), 0);
   const totalPaid = entries.reduce((s, e) => s + (e.amountPaid || 0), 0);
   const overdueCount = entries.filter((e) => e.status === "overdue").length;
+  const pendingCount = entries.filter(
+    (e) => e.status === "pending" || e.status === "partial"
+  ).length;
 
   return (
     <div>
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -290,6 +452,14 @@ export default function LedgerPage() {
           </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             {house?.name} · {house?.currency}
+            {overdueCount > 0 && (
+              <span
+                className="alert-pulse"
+                style={{ marginLeft: 8, color: "#f87171", fontWeight: 600 }}
+              >
+                · {overdueCount} overdue
+              </span>
+            )}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -343,12 +513,13 @@ export default function LedgerPage() {
         </div>
       </div>
 
+      {/* Stats */}
       {isManager && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: 12,
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 10,
             marginBottom: 24,
           }}
         >
@@ -359,9 +530,14 @@ export default function LedgerPage() {
               color: "var(--text)",
             },
             {
-              label: "Total Collected",
+              label: "Collected",
               value: fmtCurrency(totalPaid, house?.currency),
               color: "#4ade80",
+            },
+            {
+              label: "Pending",
+              value: pendingCount,
+              color: pendingCount > 0 ? "#fbbf24" : "var(--muted)",
             },
             {
               label: "Overdue",
@@ -373,16 +549,16 @@ export default function LedgerPage() {
               key={s.label}
               style={{
                 background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
+                border: `1px solid ${s.color === "#f87171" && overdueCount > 0 ? "rgba(248,113,113,0.3)" : "var(--glass-border)"}`,
                 borderRadius: 12,
-                padding: "16px 18px",
+                padding: "12px 16px",
               }}
             >
               <div
                 style={{
-                  fontSize: "0.72rem",
+                  fontSize: "0.68rem",
                   color: "var(--muted)",
-                  marginBottom: 6,
+                  marginBottom: 5,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                 }}
@@ -390,7 +566,7 @@ export default function LedgerPage() {
                 {s.label}
               </div>
               <div
-                style={{ fontSize: "1.3rem", fontWeight: 800, color: s.color }}
+                style={{ fontSize: "1.2rem", fontWeight: 800, color: s.color }}
               >
                 {s.value}
               </div>
@@ -450,12 +626,12 @@ export default function LedgerPage() {
             </div>
             <form
               onSubmit={handleSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              style={{ display: "flex", flexDirection: "column", gap: 13 }}
             >
               <div>
-                <label style={labelStyle}>Member *</label>
+                <label style={lS}>Member *</label>
                 <select
-                  style={{ ...inputStyle, cursor: "pointer" }}
+                  style={{ ...iS, cursor: "pointer" }}
                   value={form.membershipId}
                   onChange={(e) => setF("membershipId", e.target.value)}
                 >
@@ -475,11 +651,9 @@ export default function LedgerPage() {
                 }}
               >
                 <div>
-                  <label style={labelStyle}>
-                    Amount Due ({house?.currency}) *
-                  </label>
+                  <label style={lS}>Amount Due ({house?.currency}) *</label>
                   <input
-                    style={inputStyle}
+                    style={iS}
                     type="number"
                     min="0"
                     step="0.01"
@@ -489,9 +663,9 @@ export default function LedgerPage() {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Amount Paid</label>
+                  <label style={lS}>Amount Paid</label>
                   <input
-                    style={inputStyle}
+                    style={iS}
                     type="number"
                     min="0"
                     step="0.01"
@@ -509,18 +683,18 @@ export default function LedgerPage() {
                 }}
               >
                 <div>
-                  <label style={labelStyle}>Period Start *</label>
+                  <label style={lS}>Period Start *</label>
                   <input
-                    style={inputStyle}
+                    style={iS}
                     type="date"
                     value={form.periodStart}
                     onChange={(e) => setF("periodStart", e.target.value)}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Period End *</label>
+                  <label style={lS}>Period End *</label>
                   <input
-                    style={inputStyle}
+                    style={iS}
                     type="date"
                     value={form.periodEnd}
                     onChange={(e) => setF("periodEnd", e.target.value)}
@@ -535,18 +709,18 @@ export default function LedgerPage() {
                 }}
               >
                 <div>
-                  <label style={labelStyle}>Due Date *</label>
+                  <label style={lS}>Due Date *</label>
                   <input
-                    style={inputStyle}
+                    style={iS}
                     type="date"
                     value={form.dueDate}
                     onChange={(e) => setF("dueDate", e.target.value)}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Payment Method</label>
+                  <label style={lS}>Payment Method</label>
                   <select
-                    style={{ ...inputStyle, cursor: "pointer" }}
+                    style={{ ...iS, cursor: "pointer" }}
                     value={form.paymentMethod}
                     onChange={(e) => setF("paymentMethod", e.target.value)}
                   >
@@ -559,27 +733,27 @@ export default function LedgerPage() {
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Label</label>
+                <label style={lS}>Label</label>
                 <input
-                  style={inputStyle}
+                  style={iS}
                   placeholder="e.g. Rent — April 2025"
                   value={form.label}
                   onChange={(e) => setF("label", e.target.value)}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Note for member</label>
+                <label style={lS}>Note for member</label>
                 <input
-                  style={inputStyle}
+                  style={iS}
                   placeholder="Visible to the member"
                   value={form.memberNote}
                   onChange={(e) => setF("memberNote", e.target.value)}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Private note (manager only)</label>
+                <label style={lS}>Private note (manager only)</label>
                 <input
-                  style={inputStyle}
+                  style={iS}
                   placeholder="Only you can see this"
                   value={form.managerNote}
                   onChange={(e) => setF("managerNote", e.target.value)}
@@ -619,6 +793,7 @@ export default function LedgerPage() {
         </div>
       )}
 
+      {/* Entries list */}
       {entries.length === 0 ? (
         <div
           style={{
@@ -627,7 +802,15 @@ export default function LedgerPage() {
             color: "var(--muted)",
           }}
         >
-          <BookOpen size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <BookOpen
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
           <p>
             {isManager
               ? "No entries yet. Log the first payment."
@@ -635,128 +818,199 @@ export default function LedgerPage() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {entries.map((e) => (
-            <div
-              key={e._id}
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 12,
-                padding: "14px 18px",
-              }}
-            >
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {entries.map((e) => {
+            const isOverdue = e.status === "overdue";
+            const isPaid = e.status === "paid";
+            const canPay = isManager && !isPaid;
+            const isExpanded = expandedEntry === e._id;
+            return (
               <div
+                key={e._id}
+                className={isOverdue ? "border-urgent" : ""}
                 style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: 12,
+                  background: "var(--glass-bg)",
+                  border: `1px solid ${isOverdue ? "rgba(248,113,113,0.3)" : "var(--glass-border)"}`,
+                  borderRadius: 12,
+                  overflow: "hidden",
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 4,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                      {e.label || "Rent"}
-                    </span>
-                    <StatusBadge status={e.status} />
-                    {e.paymentMethod && (
-                      <span
+                <div
+                  style={{
+                    padding: "13px 18px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 4,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                        {e.label || "Rent"}
+                      </span>
+                      <StatusBadge status={e.status} />
+                      {e.paymentMethod && (
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--muted)",
+                            background: "var(--glass-bg-mid)",
+                            padding: "2px 7px",
+                            borderRadius: 50,
+                          }}
+                        >
+                          {PAYMENT_METHOD_LABELS[e.paymentMethod] ||
+                            e.paymentMethod}
+                        </span>
+                      )}
+                      {isOverdue && (
+                        <span
+                          className="alert-pulse"
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            background: "#f87171",
+                            display: "inline-block",
+                          }}
+                        />
+                      )}
+                    </div>
+                    {isManager && e.membershipId?.userId && (
+                      <div
                         style={{
-                          fontSize: "0.7rem",
-                          color: "var(--muted)",
-                          background: "var(--glass-bg-mid)",
-                          padding: "2px 7px",
-                          borderRadius: 50,
+                          fontSize: "0.78rem",
+                          color: "var(--teal)",
+                          marginBottom: 2,
                         }}
                       >
-                        {PAYMENT_METHOD_LABELS[e.paymentMethod] ||
-                          e.paymentMethod}
-                      </span>
+                        {e.membershipId.userId.name}
+                      </div>
+                    )}
+                    <div
+                      style={{ fontSize: "0.775rem", color: "var(--muted)" }}
+                    >
+                      {fmtDate(e.periodStart)} – {fmtDate(e.periodEnd)} · Due{" "}
+                      {fmtDate(e.dueDate)}
+                    </div>
+                    {e.memberNote && (
+                      <div
+                        style={{
+                          fontSize: "0.775rem",
+                          color: "var(--muted)",
+                          marginTop: 4,
+                        }}
+                      >
+                        "{e.memberNote}"
+                      </div>
+                    )}
+                    {isManager && e.managerNote && (
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--accent)",
+                          marginTop: 3,
+                        }}
+                      >
+                        {e.managerNote}
+                      </div>
                     )}
                   </div>
-                  {isManager && e.membershipId?.userId && (
+
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+                      {fmtCurrency(e.amountPaid, house?.currency)}
+                    </div>
+                    {e.amountPaid !== e.amountDue && (
+                      <div
+                        style={{ fontSize: "0.72rem", color: "var(--muted)" }}
+                      >
+                        of {fmtCurrency(e.amountDue, house?.currency)}
+                      </div>
+                    )}
                     <div
                       style={{
-                        fontSize: "0.78rem",
-                        color: "var(--teal)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      {e.membershipId.userId.name}
-                    </div>
-                  )}
-                  <div style={{ fontSize: "0.775rem", color: "var(--muted)" }}>
-                    {fmtDate(e.periodStart)} – {fmtDate(e.periodEnd)} · Due{" "}
-                    {fmtDate(e.dueDate)}
-                  </div>
-                  {e.memberNote && (
-                    <div
-                      style={{
-                        fontSize: "0.775rem",
-                        color: "var(--muted)",
-                        marginTop: 4,
-                      }}
-                    >
-                      "{e.memberNote}"
-                    </div>
-                  )}
-                  {isManager && e.managerNote && (
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--accent)",
-                        marginTop: 3,
-                      }}
-                    >
-                      {e.managerNote}
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-                    {fmtCurrency(e.amountPaid, house?.currency)}
-                  </div>
-                  {e.amountPaid !== e.amountDue && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
-                      of {fmtCurrency(e.amountDue, house?.currency)}
-                    </div>
-                  )}
-                  {/* Manager: per-member export link */}
-                  {isManager && e.membershipId?._id && (
-                    <button
-                      onClick={() => handleExport(e.membershipId._id)}
-                      disabled={exporting}
-                      style={{
+                        display: "flex",
+                        gap: 5,
                         marginTop: 6,
-                        fontSize: "0.68rem",
-                        color: "var(--muted)",
-                        background: "none",
-                        border: "none",
-                        cursor: exporting ? "not-allowed" : "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
+                        justifyContent: "flex-end",
+                        flexWrap: "wrap",
                       }}
                     >
-                      <Download size={10} /> Export
-                    </button>
-                  )}
+                      {canPay && (
+                        <button
+                          onClick={() =>
+                            setExpandedEntry(isExpanded ? null : e._id)
+                          }
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            padding: "4px 10px",
+                            borderRadius: 50,
+                            background: isExpanded
+                              ? "var(--glass-bg-mid)"
+                              : "var(--accent-dim)",
+                            border: `1px solid ${isExpanded ? "var(--glass-border)" : "var(--accent-border)"}`,
+                            color: isExpanded
+                              ? "var(--muted)"
+                              : "var(--accent)",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <DollarSign size={10} />{" "}
+                          {isExpanded ? "Cancel" : "Record Payment"}
+                        </button>
+                      )}
+                      {isManager && e.membershipId?._id && (
+                        <button
+                          onClick={() => handleExport(e.membershipId._id)}
+                          disabled={exporting}
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "var(--muted)",
+                            background: "none",
+                            border: "none",
+                            cursor: exporting ? "not-allowed" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                        >
+                          <Download size={10} /> Export
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Inline mark-paid panel */}
+                {isExpanded && canPay && (
+                  <MarkPaidPanel
+                    entry={{ ...e, houseId }}
+                    house={house}
+                    onSave={handleEntrySaved}
+                    onCancel={() => setExpandedEntry(null)}
+                  />
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
+
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes alertPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(248,113,113,.7)}50%{opacity:.85;box-shadow:0 0 0 6px rgba(248,113,113,0)}} .alert-pulse{animation:alertPulse 1.6s ease-in-out infinite} .border-urgent{border-color:rgba(248,113,113,0.3)!important} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );
 }

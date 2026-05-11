@@ -1,4 +1,4 @@
-# HOMY — PRODUCT ROADMAP
+# HOMify — PRODUCT ROADMAP
 
 > Living document. Update at every phase gate.
 
@@ -19,7 +19,7 @@
 
 ## PHASE 1 — MVP Core ✅ MOSTLY COMPLETE
 
-**Goal:** A house manager can use Homy for real daily life.
+**Goal:** A house manager can use Homify for real daily life.
 **Target:** 50 beta houses in BD/PK via direct outreach.
 
 ### Features
@@ -189,15 +189,15 @@
 These are bets, not commitments. Revisit annually.
 
 **Predictive maintenance**
-Homy accumulates appliance + maintenance data. ML model learns failure patterns. "Your water heater is 5.5 years old and usage shows stress — schedule a checkup before it fails."
+Homify accumulates appliance + maintenance data. ML model learns failure patterns. "Your water heater is 5.5 years old and usage shows stress — schedule a checkup before it fails."
 
 **Housing marketplace**
-Outgoing tenants connect incoming ones through the house profile. The house already has history, rules, member reputation. Homy becomes the trusted rental intermediary. Revenue: listing fee or commission.
+Outgoing tenants connect incoming ones through the house profile. The house already has history, rules, member reputation. Homify becomes the trusted rental intermediary. Revenue: listing fee or commission.
 
 **Property management SaaS (white-label)**
 For 50–500 unit operators. Same core engine, enterprise reporting, custom branding, bulk operations. Revenue: per-unit SaaS pricing.
 
-**Homy Concierge**
+**Homify Concierge**
 A human-assisted service layer on top of the software. A dedicated coordinator handles rent reminders, maintenance booking, house admin. Async, chat-based, $15–30/month premium tier.
 
 **Financial health layer**

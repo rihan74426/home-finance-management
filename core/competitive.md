@@ -1,4 +1,4 @@
-# HOMY — COMPETITIVE ANALYSIS
+# HOMIFY — COMPETITIVE ANALYSIS
 
 > Know your enemy. Know your advantage.
 
@@ -13,7 +13,7 @@
 SOPHISTICATION│  Tricount     Splitwise
               │  (trip splits) (ongoing expenses)
   Consumer    │
-              │              Platuni        [HOMY]
+              │              Platuni        [HOMIFY]
               │             (roommates)   (full OS)
               │
   Business    │  Hemlane    TenantCloud    DoorLoop
@@ -22,7 +22,7 @@ SOPHISTICATION│  Tricount     Splitwise
               └─────────────────────────────────────────→
 ```
 
-Homy's position: Consumer-grade simplicity at full-household scope. The only product in that quadrant for South/Southeast Asia.
+HomIFY's position: Consumer-grade simplicity at full-household scope. The only product in that quadrant for South/Southeast Asia.
 
 ---
 
@@ -47,7 +47,7 @@ Homy's position: Consumer-grade simplicity at full-household scope. The only pro
 - Person-to-person model: no "house" as a persistent entity with memory and documents.
 
 **Our counter-positioning:**
-"Splitwise handles the bill. Homy handles the home."
+"Splitwise handles the bill. HomIFY handles the home."
 Splitwise users in BD/PK/IN are the highest-value acquisition targets — they already understand the pain, they already want a solution, and they've already found Splitwise inadequate.
 
 ---
@@ -69,7 +69,7 @@ Splitwise users in BD/PK/IN are the highest-value acquisition targets — they a
 - Not designed for household living at all — it's a trip tool
 
 **Our counter-positioning:**
-Tricount users who also share a flat need Homy — Tricount doesn't solve their daily household problems.
+Tricount users who also share a flat need HomIFY — Tricount doesn't solve their daily household problems.
 
 ---
 
@@ -92,7 +92,7 @@ Tricount users who also share a flat need Homy — Tricount doesn't solve their 
 - **No social layer:** No chat, no tasks, no grocery list. It's a business tool, not a home tool.
 
 **Our counter-positioning:**
-"Property management software is for landlords. Homy is for the people who actually live there."
+"Property management software is for landlords. HomIFY is for the people who actually live there."
 Manager Pro tier steals the small landlord segment from TenantCloud at 1/10 the price.
 
 ---
@@ -117,10 +117,10 @@ The actual competitor for most BD/PK households isn't an app — it's a WhatsApp
 - No separation of concerns: rent disputes happen in the same place as memes
 
 **The switch moment:**
-Users switch from WhatsApp to Homy when a specific painful event happens — a rent dispute, a flatmate who won't pay, a lost document, a task that always gets forgotten. Homy's job is to be the obvious answer at that moment.
+Users switch from WhatsApp to HomIFY when a specific painful event happens — a rent dispute, a flatmate who won't pay, a lost document, a task that always gets forgotten. HomIFY's job is to be the obvious answer at that moment.
 
 **Our counter-positioning:**
-"Keep WhatsApp for the memes. Use Homy for the house."
+"Keep WhatsApp for the memes. Use HomIFY for the house."
 
 ---
 
@@ -136,7 +136,7 @@ Users switch from WhatsApp to Homy when a specific painful event happens — a r
 - No encryption for sensitive vault items
 - Weaker community traction
 
-**Our response:** Move faster in BD/PK/IN. Win those markets before they arrive. By the time Platuni enters Asia, Homy should have the network effect.
+**Our response:** Move faster in BD/PK/IN. Win those markets before they arrive. By the time Platuni enters Asia, HomIFY should have the network effect.
 
 ---
 
@@ -162,15 +162,15 @@ Users switch from WhatsApp to Homy when a specific painful event happens — a r
 
 ## GAP ANALYSIS — WHAT NO ONE DOES
 
-These are gaps in the market that Homy can own:
+These are gaps in the market that HomIFY can own:
 
-1. **Tenant-side household management in South Asia.** Every property management tool is designed for the landlord. Homy is designed for the person who lives there AND the manager of that household.
+1. **Tenant-side household management in South Asia.** Every property management tool is designed for the landlord. HomIFY is designed for the person who lives there AND the manager of that household.
 
-2. **Household memory / institutional knowledge.** The WiFi password, the plumber's number, the lease renewal date — this information currently lives nowhere. Homy's Vault solves this and creates stickiness that no bill-splitter can match.
+2. **Household memory / institutional knowledge.** The WiFi password, the plumber's number, the lease renewal date — this information currently lives nowhere. HomIFY's Vault solves this and creates stickiness that no bill-splitter can match.
 
 3. **Cultural context for shared living in BD/PK/IN.** Extended family households, different rent amounts per room, cash-dominant economies, WhatsApp-native users — nobody else is building for this context.
 
-4. **The receipt photo → bill split pipeline.** Take a photo of the electricity bill → Homy reads the total → splits it. No app does this end-to-end for the South Asian user.
+4. **The receipt photo → bill split pipeline.** Take a photo of the electricity bill → HomIFY reads the total → splits it. No app does this end-to-end for the South Asian user.
 
 5. **Portable household reputation.** When you leave a flat, your payment history and task completion score should go with you as proof you were a good tenant. This creates a housing marketplace data layer no one has built yet.
 

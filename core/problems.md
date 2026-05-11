@@ -1,4 +1,4 @@
-## Core Problems Homy Solves
+## Core Problems Homify Solves
 
 1. Unequal contribution (chores + money)
 2. Lack of clear rules
@@ -7,5 +7,5 @@
 5. Trust issues ("who paid?")
 6. Cultural/lifestyle mismatch
 
-Homy is NOT a tool.
-Homy is a fairness + clarity system.
+Homify is NOT a tool.
+Homify is a fairness + clarity system.

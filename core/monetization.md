@@ -1,4 +1,4 @@
-# HOMY — MONETIZATION & BUSINESS MODEL
+# HOMify — MONETIZATION & BUSINESS MODEL
 
 > Revenue strategy, pricing, and growth model.
 
@@ -10,7 +10,7 @@
 
 The free tier must be genuinely useful — not crippled. Users who experience real value will upgrade. Users who feel manipulated will leave and tell others.
 
-Homy monetizes by solving bigger problems for more serious users, not by blocking basic functionality from casual ones.
+Homify monetizes by solving bigger problems for more serious users, not by blocking basic functionality from casual ones.
 
 **Subscription fatigue is real.** 41% of consumers experience it (Sunori, 2025). Our response:
 
@@ -28,7 +28,7 @@ Homy monetizes by solving bigger problems for more serious users, not by blockin
 **Limits:** 1 house, 6 members, 5 vault items, 1 chat thread (General only), no PDF export, no SMS reminders.
 **Goal:** Convert to Pro within 30 days as the house grows.
 
-### Pro — "Homy+" (per house/month)
+### Pro — "Homify+" (per house/month)
 
 **Who it's for:** An active shared household that has outgrown the free tier.
 **Unlocks:** Unlimited members, unlimited vault items, all chat threads, bill splitting, PDF exports, SMS reminders, polls, announcements.
@@ -83,7 +83,7 @@ Homy monetizes by solving bigger problems for more serious users, not by blockin
 **Timeline:** Phase 4
 **Implementation:** bKash merchant API, Nagad API, JazzCash, UPI
 **Revenue model:** 0.5–1% transaction fee when rent is collected in-app
-**Why it works:** Manager collects rent through Homy → fee is invisible to payer
+**Why it works:** Manager collects rent through Homify → fee is invisible to payer
 **Target:** 50 houses using in-app collection at avg BDT 8,000/month rent = ~BDT 2,000–4,000/month
 
 ### 4. Local Services Marketplace
@@ -106,7 +106,7 @@ Homy monetizes by solving bigger problems for more serious users, not by blockin
 ### 6. Enterprise / Co-living SaaS
 
 **Timeline:** Year 2+
-**Implementation:** White-label Homy for 50–500 room operators
+**Implementation:** White-label Homify for 50–500 room operators
 **Revenue model:** Per-unit SaaS pricing (BDT 50–100/unit/month)
 **Why it works:** The pain at scale is even worse; operators need this more than individuals
 **Target:** 2–3 enterprise clients = BDT 50,000–200,000/month
@@ -121,7 +121,7 @@ These are non-negotiable. Breaking them destroys trust and word-of-mouth.
 2. **Free tier is genuinely useful.** A house of 4–6 people can run on free forever if they want.
 3. **No pop-up upsell ads.** Upgrades are suggested contextually (e.g., "You've reached 5 vault items — upgrade to Pro for unlimited").
 4. **No dark patterns on cancellation.** One-click cancel. No "are you sure?" loops.
-5. **No ads.** Ever. In Homy products. Data is never sold.
+5. **No ads.** Ever. In Homify products. Data is never sold.
 6. **Price in local currency.** No converting USD to BDT at market rate — that's predatory.
 
 ---
@@ -130,14 +130,14 @@ These are non-negotiable. Breaking them destroys trust and word-of-mouth.
 
 When and how to prompt upgrades — contextual only, never nagging.
 
-| Trigger                            | What to show                                                                          |
-| ---------------------------------- | ------------------------------------------------------------------------------------- |
-| User reaches 5th vault item        | "You've used 5/5 free vault items. Upgrade for unlimited."                            |
-| Manager tries to invite 7th member | "Free plan supports 6 members. Upgrade to add more."                                  |
-| Member tries to create 2nd thread  | "Free plan includes 1 chat channel (General). Upgrade for more."                      |
-| PDF export button on ledger        | "PDF export is a Pro feature. Upgrade to download."                                   |
-| Manager has been active 2 weeks    | Soft prompt: "Running a good house? Homy Pro gives you reminders, exports, and more." |
-| Bill splitting page                | If on free: show the feature behind a Pro badge, explain value                        |
+| Trigger                            | What to show                                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| User reaches 5th vault item        | "You've used 5/5 free vault items. Upgrade for unlimited."                              |
+| Manager tries to invite 7th member | "Free plan supports 6 members. Upgrade to add more."                                    |
+| Member tries to create 2nd thread  | "Free plan includes 1 chat channel (General). Upgrade for more."                        |
+| PDF export button on ledger        | "PDF export is a Pro feature. Upgrade to download."                                     |
+| Manager has been active 2 weeks    | Soft prompt: "Running a good house? Homify Pro gives you reminders, exports, and more." |
+| Bill splitting page                | If on free: show the feature behind a Pro badge, explain value                          |
 
 ---
 
@@ -149,7 +149,7 @@ Primary: **invite-driven virality**
 
 - Manager creates house → invites 3–5 members
 - Each member is a potential future manager (when they get their own flat)
-- Network effect: every house using Homy is an ad for Homy to the members
+- Network effect: every house using Homify is an ad for Homify to the members
 
 Secondary: **community seeding**
 
@@ -161,7 +161,7 @@ Content:
 
 - "How to manage a flathouse without fighting" — SEO blog
 - "The rent conversation you dread" — emotional social content
-- Short-form video: before/after Homy household
+- Short-form video: before/after Homify household
 
 ### Retention
 

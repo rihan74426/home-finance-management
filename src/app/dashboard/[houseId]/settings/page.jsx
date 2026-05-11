@@ -30,16 +30,21 @@ import {
   Unlock,
   RefreshCw,
 } from "lucide-react";
+
+import { MdApartment, MdHouse, MdSchool } from "react-icons/md";
+import { FaHome, FaBuilding } from "react-icons/fa";
+import { FiMoreHorizontal } from "react-icons/fi";
+
 import { HOUSE_TYPE } from "@/lib/constants";
 
 // ── constants ────────────────────────────────────────────────────────────────
 const HOUSE_TYPES = [
-  { value: "flat", label: "Flat / Apartment", emoji: "🏢" },
-  { value: "villa", label: "Villa", emoji: "🏡" },
-  { value: "family", label: "Family Home", emoji: "🏠" },
-  { value: "co_living", label: "Co-Living", emoji: "🏘️" },
-  { value: "dormitory", label: "Dormitory", emoji: "🏫" },
-  { value: "other", label: "Other", emoji: "🏗️" },
+  { value: "flat", label: "Flat / Apartment", Icon: MdApartment },
+  { value: "villa", label: "Villa", Icon: FaHome },
+  { value: "family", label: "Family Home", Icon: MdHouse },
+  { value: "co_living", label: "Co-Living", Icon: FaBuilding },
+  { value: "dormitory", label: "Dormitory", Icon: MdSchool },
+  { value: "other", label: "Other", Icon: FiMoreHorizontal },
 ];
 const CURRENCIES = ["BDT", "PKR", "INR", "USD", "GBP", "AUD", "EUR"];
 const RENT_METHODS = [
@@ -789,7 +794,7 @@ export default function HouseSettingsPage() {
                     gap: 7,
                   }}
                 >
-                  {HOUSE_TYPES.map(({ value, label, emoji }) => (
+                  {HOUSE_TYPES.map(({ value, label, Icon }) => (
                     <button
                       key={value}
                       type="button"
@@ -816,7 +821,15 @@ export default function HouseSettingsPage() {
                         gap: 3,
                       }}
                     >
-                      <span style={{ fontSize: "1rem" }}>{emoji}</span>
+                      <span
+                        style={{
+                          fontSize: "1rem",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Icon size={18} />
+                      </span>
                       {label}
                     </button>
                   ))}

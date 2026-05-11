@@ -1,18 +1,18 @@
-# HOMY — MASTER ARCHITECTURE DOCUMENT
+# HOMify — MASTER ARCHITECTURE DOCUMENT
 
 > Last updated: April 2026 | Status: Active Development | Phase: 1 → 2
 
 ---
 
-## 1. WHAT HOMY IS (AND ISN'T)
+## 1. WHAT HOMify IS (AND ISN'T)
 
-Homy is not a bill-splitting app. It is not a task manager. It is not a chat app.
+Homify is not a bill-splitting app. It is not a task manager. It is not a chat app.
 
-It is the **operating system for a shared home** — the single source of truth for every person who lives under one roof together. Think of it the way Slack is for teams: before Slack, teams used email + spreadsheets + phone calls. After Slack, those still exist but the team's _coordination layer_ lives in one place. Homy is that coordination layer for households.
+It is the **operating system for a shared home** — the single source of truth for every person who lives under one roof together. Think of it the way Slack is for teams: before Slack, teams used email + spreadsheets + phone calls. After Slack, those still exist but the team's _coordination layer_ lives in one place. Homify is that coordination layer for households.
 
-**The insight competitors miss:** Splitwise, Tricount, and every bill-splitter treats shared living as a _financial problem_. But the actual problem is _relationship friction_. When someone doesn't pay rent, the issue isn't accounting — it's that their housemate has to become a debt collector. Homy's job is to remove that friction entirely, before it becomes a conversation.
+**The insight competitors miss:** Splitwise, Tricount, and every bill-splitter treats shared living as a _financial problem_. But the actual problem is _relationship friction_. When someone doesn't pay rent, the issue isn't accounting — it's that their housemate has to become a debt collector. Homify's job is to remove that friction entirely, before it becomes a conversation.
 
-**What makes Homy structurally different from every competitor:**
+**What makes Homify structurally different from every competitor:**
 
 | App             | What they solve     | What they miss                                         |
 | --------------- | ------------------- | ------------------------------------------------------ |
@@ -23,7 +23,7 @@ It is the **operating system for a shared home** — the single source of truth 
 | WhatsApp groups | Communication       | No structure, no memory, everything gets buried        |
 | Google Sheets   | Tracking            | Manual, breaks down, not real-time                     |
 
-**Homy's moat:** It covers the full stack of shared living (money + tasks + information + communication) in one place, built mobile-first for South/Southeast Asian markets where no quality option exists, priced at local purchasing power parity.
+**Homify's moat:** It covers the full stack of shared living (money + tasks + information + communication) in one place, built mobile-first for South/Southeast Asian markets where no quality option exists, priced at local purchasing power parity.
 
 ---
 
@@ -37,7 +37,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - Renting a flat with 2–4 others
 - They became the "house manager" by default (first to sign the lease, most organized)
 - Pain: collecting rent from flatmates is awkward; tracking who paid what is mental overhead
-- They will pay for Homy if it makes the money conversation go away
+- They will pay for Homify if it makes the money conversation go away
 - Acquisition: Facebook flat-share groups, university WhatsApp groups
 
 **Persona B — The Professional Flatmate**
@@ -45,7 +45,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - 24–35, working professional in Dhaka, Karachi, Bangalore
 - Joined an existing shared flat or co-living space
 - Pain: feels anxious about money disputes; wants transparency without confrontation
-- They will adopt Homy if their manager uses it (pull adoption)
+- They will adopt Homify if their manager uses it (pull adoption)
 - Acquisition: invite from manager
 
 **Persona C — The Landlord/Building Manager**
@@ -104,7 +104,7 @@ It is the **operating system for a shared home** — the single source of truth 
 - Expensive ($20–50/month) — wrong price point for emerging markets
 - US/UK centric — no bKash, no UPI, no JazzCash
 
-### Whitespace Homy Owns
+### Whitespace Homify Owns
 
 1. **Tenant-side household management** — managers AND members both have a great experience
 2. **South/Southeast Asia first** — language, payment methods, cultural context
@@ -146,7 +146,7 @@ Analytics          PostHog                 Privacy-friendly, self-hostable
 ### 4.2 Repository Structure
 
 ```
-homy/
+homify/
 ├── src/
 │   ├── app/
 │   │   ├── (marketing)/           # Landing page, pricing, blog

@@ -1,4 +1,4 @@
-# HOMY — FEATURE SPECIFICATIONS
+# HOMIFY — FEATURE SPECIFICATIONS
 
 > Detailed spec for every feature. Use this to scope work before building.
 
@@ -312,7 +312,7 @@ Example: "Rent increases to BDT 9,000 from next month."
 - Table: Period | Label | Amount Due | Amount Paid | Status | Method | Date
 - Total paid, total outstanding
 - Generated date footer
-- Homy branding
+- HomIFY branding
 
 **Access:** Manager can export any member. Member can export their own.
 

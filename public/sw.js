@@ -1,4 +1,4 @@
-// public/sw.js — Homy push notifications service worker
+// public/sw.js — Homify push notifications service worker
 // Must be at public/sw.js so it's served from the root URL /sw.js
 
 const APP_URL = self.location.origin;
@@ -13,11 +13,11 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "Homy", body: event.data.text() };
+    data = { title: "Homify", body: event.data.text() };
   }
 
   const {
-    title = "Homy",
+    title = "Homify",
     body = "",
     icon = "/favicon.png",
     badge = "/favicon.png",

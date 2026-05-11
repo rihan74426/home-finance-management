@@ -1,8 +1,8 @@
-# 🏠 Homy — The Household Operating System
+# 🏠 Homify — The Household Operating System
 
 > _"Your home, finally organized."_
 
-Homy is a unified household management platform for people who share a living space — flatmates, families, rental tenants, co-living residents. It handles everything from rent tracking to chore assignment, shared bills to household chat, WiFi passwords to grocery lists. Built for Asia first, designed for the world.
+Homify is a unified household management platform for people who share a living space — flatmates, families, rental tenants, co-living residents. It handles everything from rent tracking to chore assignment, shared bills to household chat, WiFi passwords to grocery lists. Built for Asia first, designed for the world.
 
 ---
 
@@ -12,7 +12,7 @@ Homy is a unified household management platform for people who share a living sp
 2. [The Problem We Solve](#the-problem-we-solve)
 3. [Product Feature Blueprint](#product-feature-blueprint)
 4. [Tech Stack](#tech-stack)
-5. [Migration Plan (EquiFlow → Homy)](#migration-plan)
+5. [Migration Plan (EquiFlow → Homify)](#migration-plan)
 6. [Architecture Overview](#architecture-overview)
 7. [Data Model Summary](#data-model-summary)
 8. [Monetization Strategy](#monetization-strategy)
@@ -27,11 +27,11 @@ Homy is a unified household management platform for people who share a living sp
 
 ## The Vision
 
-Homy is not a budgeting app. It is not a chat app. It is not a task manager.
+Homify is not a budgeting app. It is not a chat app. It is not a task manager.
 
-It is the **operating system for a shared home** — a single place where everyone who lives together can coordinate, share, pay, remember, and connect. The way WhatsApp became the default for family communication, Homy becomes the default for household management.
+It is the **operating system for a shared home** — a single place where everyone who lives together can coordinate, share, pay, remember, and connect. The way WhatsApp became the default for family communication, Homify becomes the default for household management.
 
-The emotional promise: **less friction, more harmony.** When people share space without clear systems, resentment builds. Homy removes the friction — who owes what, who forgot the task, who has the WiFi password — quietly, in the background, so people can just live.
+The emotional promise: **less friction, more harmony.** When people share space without clear systems, resentment builds. Homify removes the friction — who owes what, who forgot the task, who has the WiFi password — quietly, in the background, so people can just live.
 
 ---
 
@@ -67,7 +67,7 @@ The emotional promise: **less friction, more harmony.** When people share space 
 | Notion        | Too complex for non-technical users          |
 | Excel         | Not mobile-first, no real-time collaboration |
 
-**Homy fills the gap**: structured enough to be useful, simple enough that your least tech-savvy flatmate will actually use it.
+**Homify fills the gap**: structured enough to be useful, simple enough that your least tech-savvy flatmate will actually use it.
 
 ---
 
@@ -75,7 +75,7 @@ The emotional promise: **less friction, more harmony.** When people share space 
 
 ### Core Concept: The House
 
-Everything in Homy is organized around a **House**. One house, multiple members, one manager (Head of House). Members join by invite. The house has rooms, a ledger, a vault, a board, and a chat.
+Everything in Homify is organized around a **House**. One house, multiple members, one manager (Head of House). Members join by invite. The house has rooms, a ledger, a vault, a board, and a chat.
 
 ---
 
@@ -364,7 +364,7 @@ Analytics:        PostHog (privacy-friendly)
 
 ## Migration Plan
 
-### From: Current EquiFlow (Vite + React) → Homy (Next.js 14)
+### From: Current EquiFlow (Vite + React) → Homify (Next.js 14)
 
 **Why Next.js over continuing with Vite + React:**
 
@@ -380,7 +380,7 @@ Analytics:        PostHog (privacy-friendly)
 #### Step 1 — New Repository Setup (Week 1)
 
 ```bash
-npx create-next-app@latest homy --typescript --tailwind --app
+npx create-next-app@latest homify --typescript --tailwind --app
 ```
 
 - Set up folder structure (see Architecture section)
@@ -392,8 +392,8 @@ npx create-next-app@latest homy --typescript --tailwind --app
 
 - Port the landing page sections from current React components to Next.js pages
 - Hero, About, Features, Pricing, FAQ, Contact
-- Update config.ts with Homy branding
-- Replace EquiFlow content with Homy content
+- Update config.ts with Homify branding
+- Replace EquiFlow content with Homify content
 
 #### Step 3 — Auth System (Week 2)
 
@@ -433,7 +433,7 @@ npx create-next-app@latest homy --typescript --tailwind --app
 ## Architecture Overview
 
 ```
-homy/
+homify/
 ├── apps/
 │   ├── web/                    # Next.js 14 web app
 │   │   ├── app/
@@ -535,7 +535,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - Chat (1 general thread)
 - No PDF exports
 
-**Pro — "Homy+" (BDT 199/PKR 800/INR 149 per house/month)**
+**Pro — "Homify+" (BDT 199/PKR 800/INR 149 per house/month)**
 
 - Unlimited members
 - Full ledger + PDF exports
@@ -637,8 +637,8 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 
 - "How to manage a flathouse without fighting" — blog
 - "The rent conversation you dread" — emotional content
-- "WhatsApp vs Homy for managing your house" — comparison content
-- Short-form videos: problem scenarios (flatmate forgot rent → Homy solves it)
+- "WhatsApp vs Homify for managing your house" — comparison content
+- Short-form videos: problem scenarios (flatmate forgot rent → Homify solves it)
 - User-generated content: "Show us your messy rent spreadsheet, we'll fix it"
 
 ---
@@ -657,7 +657,7 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 - [ ] Basic grocery list
 - [ ] Simple chat (general thread only)
 - [ ] Push notifications
-- [ ] Landing page (Homy branding)
+- [ ] Landing page (Homify branding)
 - [ ] Deploy: Vercel + Railway
 - [ ] Beta launch: 50 houses in BD/PK via direct outreach
 
@@ -724,17 +724,17 @@ The goal is to make the free tier so genuinely useful that users develop a habit
 
 ### The Home Intelligence Layer
 
-As Homy accumulates household data (what people buy, how they pay, what breaks, who they live with), it becomes the intelligence layer of domestic life.
+As Homify accumulates household data (what people buy, how they pay, what breaks, who they live with), it becomes the intelligence layer of domestic life.
 
 **Predictive maintenance:** "Your water heater logs show usage spikes — it typically fails after 6 years. Yours is 5.5 years old. Want a pre-emptive checkup?"
 
 **Community-level insights:** "In your area, electricity bills went up 18% this month. Here's how your house compares."
 
-**Housing marketplace:** Connect outgoing tenants with incoming ones. The house profile is already built. Homy becomes a trusted rental intermediary.
+**Housing marketplace:** Connect outgoing tenants with incoming ones. The house profile is already built. Homify becomes a trusted rental intermediary.
 
 **Property management SaaS:** A white-label platform for property managers who manage 50–500 units. The same engine, scaled up with commercial reporting.
 
-**Homy Concierge (Premium tier):** A real human who handles your rent reminders, handles maintenance booking, and manages your house admin for you. A service layer on top of the software.
+**Homify Concierge (Premium tier):** A real human who handles your rent reminders, handles maintenance booking, and manages your house admin for you. A service layer on top of the software.
 
 **Smart home integration:** Integrate with smart locks (August, Yale), smart meters (if available), and IoT devices. "Your front door was unlocked for 2 hours — was that intentional?"
 
@@ -756,7 +756,7 @@ As Homy accumulates household data (what people buy, how they pay, what breaks, 
 1. "Stop being the group chat admin. Be the house manager."
 2. "Rent paid? Tracked. WiFi password? Saved. Chores done? Finally."
 3. "One app. Everything your house needs."
-4. "No awkward money conversations. Homy handles it."
+4. "No awkward money conversations. Homify handles it."
 
 ### Channels (Priority Order)
 
@@ -827,8 +827,8 @@ Price in **local currency at local purchasing power**. A product priced at USD 8
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/homy
-cd homy
+git clone https://github.com/yourusername/homify
+cd homify
 
 # Install dependencies (monorepo)
 npm install
