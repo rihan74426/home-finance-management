@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { usePageActions } from "@/hooks/usePageActions";
 import { toast } from "sonner";
 import {
   ShieldCheck,
@@ -227,7 +228,7 @@ function VaultCard({ item, isManager, onDelete }) {
           )}
           {(isManager || item.canDelete) && (
             <button
-              onClick={() => onDelete(item._id)}
+              onClick={() => onDelete(item._id, item.label)}
               style={{
                 background: "none",
                 border: "none",
@@ -314,6 +315,7 @@ export default function VaultPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { deleteVaultItem } = usePageActions({ houseId });
   const [form, setForm] = useState({
     type: "wifi",
     label: "",
@@ -376,13 +378,8 @@ export default function VaultPage() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this vault item?")) return;
-    setItems((p) => p.filter((i) => i._id !== id));
-    const res = await fetch(`/api/vault/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      toast.error("Failed to delete.");
-    } else toast.success("Item deleted.");
+  function handleDelete(id, label) {
+    deleteVaultItem({ itemId: id, itemLabel: label, items, setItems });
   }
 
   // Group by type

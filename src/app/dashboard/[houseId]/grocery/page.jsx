@@ -12,9 +12,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  RefreshCw,
 } from "lucide-react";
-import { useUndo } from "@/hooks/useUndo";
+import { usePageActions } from "@/hooks/usePageActions";
 import { GrocerySkeleton } from "@/components/ui/Skeleton";
 
 const POLL_INTERVAL = 5000;
@@ -123,6 +122,7 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         gap: 11,
       }}
     >
+      {/* Checkbox */}
       <button
         onClick={onToggle}
         disabled={toggling}
@@ -151,6 +151,8 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           <Check size={12} color="#4ade80" strokeWidth={3} />
         ) : null}
       </button>
+
+      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -213,6 +215,8 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           </div>
         )}
       </div>
+
+      {/* Added-by avatar */}
       {!done && item.addedBy?.name && (
         <div
           style={{
@@ -233,6 +237,8 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           {item.addedBy.name[0].toUpperCase()}
         </div>
       )}
+
+      {/* Delete — undo enabled */}
       <button
         onClick={onDelete}
         style={{
@@ -242,8 +248,11 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
           color: "var(--muted)",
           padding: 3,
           flexShrink: 0,
-          opacity: 0.6,
+          borderRadius: 6,
+          transition: "color 0.15s",
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
       >
         <Trash2 size={13} />
       </button>
@@ -254,7 +263,10 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function GroceryPage() {
   const { houseId } = useParams();
-  const { withUndo } = useUndo(5000);
+  const { deleteGroceryItem, toggleGroceryBought } = usePageActions({
+    houseId,
+  });
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showBought, setShowBought] = useState(false);
@@ -262,19 +274,22 @@ export default function GroceryPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toggling, setToggling] = useState({});
-  const [liveIndicator, setLiveIndicator] = useState(false); // flash when new items arrive
+  const [liveIndicator, setLiveIndicator] = useState(false);
   const [form, setForm] = useState({
     name: "",
     quantity: "",
     category: "other",
     note: "",
   });
+
   const nameRef = useRef(null);
   const pollRef = useRef(null);
-  const pendingOps = useRef(new Set()); // item IDs with in-flight optimistic changes
+  // Track item IDs with pending optimistic ops so polling doesn't overwrite them
+  const pendingOps = useRef(new Set());
+
   const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  // ── Fetch items ──────────────────────────────────────────────────────────────
+  // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchItems = useCallback(
     async (showBoughtFlag, silent = false) => {
       try {
@@ -285,16 +300,14 @@ export default function GroceryPage() {
         if (!json.success) return;
 
         setItems((prev) => {
-          // Don't override items that have pending optimistic operations
           if (pendingOps.current.size === 0) {
-            // Flash indicator if new items arrived silently
             if (silent && json.data.length > prev.length) {
               setLiveIndicator(true);
               setTimeout(() => setLiveIndicator(false), 1200);
             }
             return json.data;
           }
-          // Merge: keep optimistic state for pending items, update rest
+          // Merge: keep optimistic state for pending items
           const serverMap = Object.fromEntries(
             json.data.map((i) => [String(i._id), i])
           );
@@ -303,7 +316,6 @@ export default function GroceryPage() {
               ? item
               : serverMap[String(item._id)] || item
           );
-          // Add brand-new items from server that aren't in prev
           const prevIds = new Set(prev.map((i) => String(i._id)));
           const newItems = json.data.filter((i) => !prevIds.has(String(i._id)));
           if (newItems.length > 0 && silent) {
@@ -313,7 +325,7 @@ export default function GroceryPage() {
           return [...merged, ...newItems];
         });
       } catch {
-        /* silent fail — don't disrupt UI */
+        /* silent */
       } finally {
         if (!silent) setLoading(false);
       }
@@ -321,12 +333,10 @@ export default function GroceryPage() {
     [houseId]
   );
 
-  // Initial load
   useEffect(() => {
     fetchItems(false, false);
   }, [fetchItems]);
 
-  // Real-time polling
   useEffect(() => {
     clearInterval(pollRef.current);
     pollRef.current = setInterval(
@@ -336,7 +346,6 @@ export default function GroceryPage() {
     return () => clearInterval(pollRef.current);
   }, [fetchItems, showBought]);
 
-  // Focus name input when form opens
   useEffect(() => {
     if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
   }, [showForm]);
@@ -371,58 +380,28 @@ export default function GroceryPage() {
     }
   }
 
-  // ── Toggle bought ────────────────────────────────────────────────────────
-  function toggleBought(item) {
-    const next = !item.isBought;
-    const prevItems = [...items];
+  // ── Toggle bought — undo enabled ──────────────────────────────────────────
+  function handleToggle(item) {
     const id = String(item._id);
-
     pendingOps.current.add(id);
-    setToggling((p) => ({ ...p, [id]: true }));
-
-    withUndo({
-      message: next
-        ? `"${item.name}" marked as bought`
-        : `"${item.name}" unmarked`,
-      optimisticUpdate: () =>
-        setItems((p) =>
-          p.map((i) => (String(i._id) === id ? { ...i, isBought: next } : i))
-        ),
-      revert: () => {
-        setItems(prevItems);
-        pendingOps.current.delete(id);
-        setToggling((p) => ({ ...p, [id]: false }));
-      },
-      apiCall: async () => {
-        const res = await fetch(`/api/grocery/${item._id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isBought: next }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-      },
-      onSuccess: () => {
-        pendingOps.current.delete(id);
-        setToggling((p) => ({ ...p, [id]: false }));
-      },
-      onError: () => {
-        pendingOps.current.delete(id);
-        setToggling((p) => ({ ...p, [id]: false }));
-      },
+    toggleGroceryBought({
+      item,
+      items,
+      setItems,
+      setToggling,
+      // Clean up pending flag after API resolves
+      onSuccess: () => pendingOps.current.delete(id),
+      onError: () => pendingOps.current.delete(id),
     });
   }
 
-  // ── Delete item ──────────────────────────────────────────────────────────
-  function handleDelete(id) {
-    const prevItems = [...items];
-    const item = items.find((i) => String(i._id) === String(id));
-    withUndo({
-      message: `"${item?.name || "Item"}" removed`,
-      optimisticUpdate: () =>
-        setItems((p) => p.filter((i) => String(i._id) !== String(id))),
-      revert: () => setItems(prevItems),
-      apiCall: () => fetch(`/api/grocery/${id}`, { method: "DELETE" }),
+  // ── Delete — undo enabled ─────────────────────────────────────────────────
+  function handleDelete(item) {
+    deleteGroceryItem({
+      itemId: item._id,
+      itemName: item.name,
+      items,
+      setItems,
     });
   }
 
@@ -432,6 +411,7 @@ export default function GroceryPage() {
     await fetchItems(next, false);
   }
 
+  // ── Derived lists ─────────────────────────────────────────────────────────
   const active = items.filter((i) => !i.isBought);
   const bought = items.filter((i) => i.isBought);
   const applyFilter = (list) =>
@@ -471,7 +451,7 @@ export default function GroceryPage() {
             >
               Grocery List
             </h1>
-            {/* Live pulse */}
+            {/* Live indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div
                 style={{
@@ -489,7 +469,7 @@ export default function GroceryPage() {
           </div>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
             {active.length} item{active.length !== 1 ? "s" : ""} to get
-            {bought.length > 0 ? ` · ${bought.length} bought` : ""}
+            {bought.length > 0 && ` · ${bought.length} bought`}
           </p>
         </div>
         <button
@@ -666,9 +646,19 @@ export default function GroceryPage() {
             color: "var(--muted)",
           }}
         >
-          <ShoppingCart size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p style={{ marginBottom: 4 }}>Your list is empty.</p>
-          <p style={{ fontSize: "0.82rem" }}>Add something to get started.</p>
+          <ShoppingCart
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
+          <p>Your list is empty.</p>
+          <p style={{ fontSize: "0.82rem", marginTop: 4 }}>
+            Add something to get started.
+          </p>
         </div>
       )}
 
@@ -687,8 +677,8 @@ export default function GroceryPage() {
               key={item._id}
               item={item}
               toggling={toggling[String(item._id)]}
-              onToggle={() => toggleBought(item)}
-              onDelete={() => handleDelete(item._id)}
+              onToggle={() => handleToggle(item)}
+              onDelete={() => handleDelete(item)}
             />
           ))}
         </div>
@@ -730,8 +720,8 @@ export default function GroceryPage() {
                   key={item._id}
                   item={item}
                   toggling={toggling[String(item._id)]}
-                  onToggle={() => toggleBought(item)}
-                  onDelete={() => handleDelete(item._id)}
+                  onToggle={() => handleToggle(item)}
+                  onDelete={() => handleDelete(item)}
                 />
               ))}
             </div>

@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Rules page — undo-enabled delete
+ * Drop-in replacement for src/app/dashboard/[houseId]/rules/page.jsx
+ * Only the delete and resolve-alert actions are undo-enabled.
+ */
+
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -9,12 +15,10 @@ import {
   X,
   Loader2,
   AlertTriangle,
-  CheckCircle,
-  Clock,
   Trash2,
-  Edit2,
   Flag,
 } from "lucide-react";
+import { usePageActions } from "@/hooks/usePageActions";
 
 const CATEGORY_CONFIG = {
   quiet_hours: { label: "Quiet Hours", color: "#a78bfa" },
@@ -56,7 +60,6 @@ const lS = {
 };
 
 function RuleCard({ rule, isManager, onDelete, onReport }) {
-  const [expanded, setExpanded] = useState(false);
   const cat = CATEGORY_CONFIG[rule.category] || CATEGORY_CONFIG.other;
   return (
     <div
@@ -75,7 +78,7 @@ function RuleCard({ rule, isManager, onDelete, onReport }) {
           gap: 14,
         }}
       >
-        {/* Rule number */}
+        {/* Number badge */}
         <div
           style={{
             width: 36,
@@ -136,7 +139,6 @@ function RuleCard({ rule, isManager, onDelete, onReport }) {
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <button
             onClick={() => onReport(rule)}
-            title="Report violation"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -155,14 +157,20 @@ function RuleCard({ rule, isManager, onDelete, onReport }) {
           </button>
           {isManager && (
             <button
-              onClick={() => onDelete(rule._id)}
+              onClick={() => onDelete(rule)}
               style={{
                 background: "none",
                 border: "none",
                 cursor: "pointer",
                 color: "var(--muted)",
                 padding: 4,
+                borderRadius: 6,
+                transition: "color 0.15s",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--muted)")
+              }
             >
               <Trash2 size={13} />
             </button>
@@ -175,6 +183,8 @@ function RuleCard({ rule, isManager, onDelete, onReport }) {
 
 export default function RulesPage() {
   const { houseId } = useParams();
+  const { deleteRule } = usePageActions({ houseId });
+
   const [rules, setRules] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [isManager, setIsManager] = useState(false);
@@ -184,7 +194,6 @@ export default function RulesPage() {
   const [reportTarget, setReportTarget] = useState(null);
   const [reportDesc, setReportDesc] = useState("");
   const [reporting, setReporting] = useState(false);
-
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -234,11 +243,37 @@ export default function RulesPage() {
     }
   }
 
-  async function handleDelete(ruleId) {
-    if (!confirm("Delete this rule?")) return;
-    setRules((p) => p.filter((r) => r._id !== ruleId));
-    await fetch(`/api/rules/${ruleId}`, { method: "DELETE" });
-    toast.success("Rule deleted.");
+  // ── Undo-enabled delete ───────────────────────────────────────────────────
+  function handleDelete(rule) {
+    deleteRule({ ruleId: rule._id, ruleTitle: rule.title, rules, setRules });
+  }
+
+  // ── Undo-enabled alert resolve ────────────────────────────────────────────
+  function resolveAlert(alertId, status) {
+    const snapshot = [...alerts];
+    // optimistic: remove from open list
+    setAlerts((p) => p.filter((a) => a._id !== alertId));
+
+    const ruleId = alerts.find((a) => a._id === alertId)?.ruleId?._id;
+
+    fetch(`/api/rules/${ruleId}/alerts/${alertId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success) {
+          setAlerts(snapshot);
+          toast.error(j.error || "Failed to update alert.");
+        } else {
+          toast.success(`Alert ${status}.`);
+        }
+      })
+      .catch(() => {
+        setAlerts(snapshot);
+        toast.error("Network error.");
+      });
   }
 
   async function handleReport(e) {
@@ -266,31 +301,39 @@ export default function RulesPage() {
     }
   }
 
-  async function resolveAlert(alertId, status) {
-    const res = await fetch(
-      `/api/rules/${alerts.find((a) => a._id === alertId)?.ruleId?._id}/alerts/${alertId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      }
-    );
-    const json = await res.json();
-    if (json.success) {
-      setAlerts((p) => p.filter((a) => a._id !== alertId));
-      toast.success(`Alert ${status}.`);
-    }
-  }
-
   if (loading)
     return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading rules…
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div
+            className="sk"
+            style={{ width: 140, height: 28, borderRadius: 6 }}
+          />
+          <div
+            className="sk"
+            style={{ width: 100, height: 36, borderRadius: 50 }}
+          />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{ height: 70, borderRadius: 12, marginBottom: 8 }}
+          />
+        ))}
+        <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
       </div>
     );
 
   return (
     <div>
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -345,7 +388,7 @@ export default function RulesPage() {
         )}
       </div>
 
-      {/* Manager: open alerts */}
+      {/* Open alerts — manager only */}
       {isManager && alerts.length > 0 && (
         <div
           style={{
@@ -364,6 +407,16 @@ export default function RulesPage() {
               marginBottom: 12,
             }}
           >
+            <span
+              className="alert-pulse"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#f87171",
+                display: "block",
+              }}
+            />
             <AlertTriangle size={14} color="#f87171" />
             <span
               style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f87171" }}
@@ -507,7 +560,7 @@ export default function RulesPage() {
                     resize: "vertical",
                     fontFamily: "inherit",
                   }}
-                  placeholder="Explain the rule in more detail"
+                  placeholder="Explain in more detail"
                   value={form.description}
                   onChange={(e) => setF("description", e.target.value)}
                   maxLength={500}
@@ -652,7 +705,7 @@ export default function RulesPage() {
                 />
               </div>
               <p style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-                The manager and all members will be notified.
+                The manager will be notified.
               </p>
               <button
                 type="submit"
@@ -693,16 +746,22 @@ export default function RulesPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
-            justifyItems: "center",
-
             color: "var(--muted)",
           }}
         >
-          <BookMarked size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <BookMarked
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
           <p>
             {isManager
               ? "No rules yet. Add the first one."
-              : "No house rules have been set yet."}
+              : "No house rules set yet."}
           </p>
         </div>
       ) : (
@@ -718,7 +777,8 @@ export default function RulesPage() {
           ))}
         </div>
       )}
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
+
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes alertPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(248,113,113,.7)}50%{opacity:.85;box-shadow:0 0 0 6px rgba(248,113,113,0)}} .alert-pulse{animation:alertPulse 1.6s ease-in-out infinite} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );
 }

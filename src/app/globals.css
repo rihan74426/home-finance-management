@@ -445,3 +445,24 @@ html {
   background: rgba(248, 113, 113, 0.04);
   border-left: 3px solid #f87171;
 }
+
+/* Sonner undo toast — teal Undo button */
+[data-sonner-toaster] [data-action] button {
+  background: rgba(45, 212, 191, 0.15) !important;
+  border: 1px solid rgba(45, 212, 191, 0.35) !important;
+  color: #2dd4bf !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  border-radius: 8px !important;
+  padding: 5px 12px !important;
+  transition: background 0.15s !important;
+}
+[data-sonner-toaster] [data-action] button:hover {
+  background: rgba(45, 212, 191, 0.28) !important;
+}
+[data-sonner-toast][data-type="success"] {
+  border-color: rgba(74, 222, 128, 0.3) !important;
+}
+[data-sonner-toast][data-type="error"] {
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}

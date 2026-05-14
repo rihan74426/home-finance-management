@@ -12,8 +12,8 @@ import {
   Globe,
   Pin,
   Trash2,
-  Bell,
 } from "lucide-react";
+import { usePageActions } from "@/hooks/usePageActions";
 
 const CATEGORY_CONFIG = {
   general: { label: "General", color: "var(--teal)" },
@@ -170,7 +170,7 @@ function NoteCard({ note, isManager, onDelete }) {
           </div>
           {isManager && (
             <button
-              onClick={() => onDelete(note._id)}
+              onClick={() => onDelete(note)}
               style={{
                 background: "none",
                 border: "none",
@@ -178,7 +178,13 @@ function NoteCard({ note, isManager, onDelete }) {
                 color: "var(--muted)",
                 padding: 4,
                 flexShrink: 0,
+                borderRadius: 6,
+                transition: "color 0.15s",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--muted)")
+              }
             >
               <Trash2 size={13} />
             </button>
@@ -191,13 +197,14 @@ function NoteCard({ note, isManager, onDelete }) {
 
 export default function NotesPage() {
   const { houseId } = useParams();
+  const { deleteNote } = usePageActions({ houseId });
+
   const [notes, setNotes] = useState([]);
   const [isManager, setIsManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [filter, setFilter] = useState("all"); // all | private | public
-
+  const [filter, setFilter] = useState("all");
   const [form, setForm] = useState({
     title: "",
     body: "",
@@ -258,11 +265,14 @@ export default function NotesPage() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this note?")) return;
-    setNotes((p) => p.filter((n) => n._id !== id));
-    await fetch(`/api/notes/${id}`, { method: "DELETE" });
-    toast.success("Note deleted.");
+  // ── Undo-enabled delete ───────────────────────────────────────────────────
+  function handleDelete(note) {
+    deleteNote({
+      noteId: note._id,
+      noteTitle: note.title || note.body.slice(0, 30),
+      notes,
+      setNotes,
+    });
   }
 
   const filtered = notes.filter((n) => {
@@ -273,13 +283,37 @@ export default function NotesPage() {
 
   if (loading)
     return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading notes…
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div
+            className="sk"
+            style={{ width: 100, height: 28, borderRadius: 6 }}
+          />
+          <div
+            className="sk"
+            style={{ width: 110, height: 36, borderRadius: 50 }}
+          />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{ height: 90, borderRadius: 13, marginBottom: 8 }}
+          />
+        ))}
+        <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
       </div>
     );
 
   return (
     <div>
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -336,7 +370,7 @@ export default function NotesPage() {
         )}
       </div>
 
-      {/* Filter tabs */}
+      {/* Filter tabs — manager only */}
       {isManager && (
         <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
           {[
@@ -428,8 +462,8 @@ export default function NotesPage() {
                   }}
                 >
                   {[
-                    [true, "Private", Lock, "Only you see this"],
-                    [false, "Shared", Globe, "All members see this"],
+                    [true, "Private", Lock, "Only you"],
+                    [false, "Shared", Globe, "All members"],
                   ].map(([val, l, Icon, hint]) => (
                     <button
                       key={String(val)}
@@ -600,15 +634,21 @@ export default function NotesPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
-            justifyItems: "center",
-
             color: "var(--muted)",
           }}
         >
-          <StickyNote size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <StickyNote
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
           <p>
             {isManager
-              ? "No notes yet. Add a private or shared note."
+              ? "No notes yet."
               : "No shared notes from your manager yet."}
           </p>
         </div>
@@ -624,6 +664,7 @@ export default function NotesPage() {
           ))}
         </div>
       )}
+
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );

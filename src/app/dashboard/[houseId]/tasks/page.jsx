@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { TASK_PRIORITY, TASK_CATEGORY, TASK_STATUS } from "@/lib/constants";
 import { TasksSkeleton } from "@/components/ui/Skeleton";
-import { useUndo } from "@/hooks/useUndo";
+import { usePageActions } from "@/hooks/usePageActions";
 
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "var(--muted)" },
@@ -70,7 +70,8 @@ const lS = {
 
 export default function TasksPage() {
   const { houseId } = useParams();
-  const { withUndo } = useUndo(5000);
+  const { deleteTask, toggleTaskDone } = usePageActions({ houseId });
+
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,42 +138,19 @@ export default function TasksPage() {
     }
   }
 
-  function toggleDone(task) {
+  // ── Undo-enabled actions ──────────────────────────────────────────────────
+
+  function handleToggleDone(task) {
     const newStatus =
       task.status === TASK_STATUS.DONE ? TASK_STATUS.TODO : TASK_STATUS.DONE;
-    const prevTasks = [...tasks];
-
-    withUndo({
-      message:
-        newStatus === TASK_STATUS.DONE ? "Task marked done" : "Task reopened",
-      optimisticUpdate: () =>
-        setTasks((p) =>
-          p.map((t) => (t._id === task._id ? { ...t, status: newStatus } : t))
-        ),
-      revert: () => setTasks(prevTasks),
-      apiCall: async () => {
-        const res = await fetch(`/api/tasks/${task._id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-      },
-    });
+    toggleTaskDone({ task, newStatus, tasks, setTasks });
   }
 
-  function handleDelete(id) {
-    const prevTasks = [...tasks];
-    const task = tasks.find((t) => t._id === id);
-
-    withUndo({
-      message: `Task "${task?.title || "task"}" deleted`,
-      optimisticUpdate: () => setTasks((p) => p.filter((t) => t._id !== id)),
-      revert: () => setTasks(prevTasks),
-      apiCall: () => fetch(`/api/tasks/${id}`, { method: "DELETE" }),
-    });
+  function handleDelete(task) {
+    deleteTask({ taskId: task._id, taskTitle: task.title, tasks, setTasks });
   }
+
+  // ── Filter ────────────────────────────────────────────────────────────────
 
   const filtered = tasks.filter((t) => {
     if (filter === "active") return t.status !== TASK_STATUS.DONE;
@@ -185,6 +163,7 @@ export default function TasksPage() {
 
   return (
     <div>
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -198,7 +177,6 @@ export default function TasksPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              justifyItems: "center",
               gap: 10,
               marginBottom: 4,
             }}
@@ -452,12 +430,18 @@ export default function TasksPage() {
           style={{
             textAlign: "center",
             padding: "60px 0",
-            justifyItems: "center",
-
             color: "var(--muted)",
           }}
         >
-          <CheckSquare size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <CheckSquare
+            size={40}
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
+          />
           <p>
             {filter === "done"
               ? "No completed tasks yet."
@@ -483,10 +467,12 @@ export default function TasksPage() {
                   alignItems: "flex-start",
                   gap: 12,
                   opacity: isDone ? 0.6 : 1,
+                  transition: "opacity 0.2s",
                 }}
               >
+                {/* Checkbox */}
                 <button
-                  onClick={() => toggleDone(task)}
+                  onClick={() => handleToggleDone(task)}
                   style={{
                     background: "none",
                     border: "none",
@@ -499,6 +485,8 @@ export default function TasksPage() {
                 >
                   {isDone ? <CheckSquare size={17} /> : <Square size={17} />}
                 </button>
+
+                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -529,8 +517,7 @@ export default function TasksPage() {
                         gap: 3,
                       }}
                     >
-                      <Flag size={10} />
-                      {pc.label}
+                      <Flag size={10} /> {pc.label}
                     </span>
                   </div>
                   {task.description && (
@@ -562,14 +549,16 @@ export default function TasksPage() {
                           gap: 3,
                         }}
                       >
-                        <Calendar size={11} />
-                        {due.text}
+                        <Calendar size={11} /> {due.text}
                       </span>
                     )}
                   </div>
                 </div>
+
+                {/* Delete — undo-enabled */}
                 <button
-                  onClick={() => handleDelete(task._id)}
+                  onClick={() => handleDelete(task)}
+                  title="Delete task"
                   style={{
                     background: "none",
                     border: "none",
@@ -577,7 +566,15 @@ export default function TasksPage() {
                     color: "var(--muted)",
                     padding: 4,
                     flexShrink: 0,
+                    borderRadius: 6,
+                    transition: "color 0.15s",
                   }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#f87171")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "var(--muted)")
+                  }
                 >
                   <Trash2 size={13} />
                 </button>
@@ -586,6 +583,7 @@ export default function TasksPage() {
           })}
         </div>
       )}
+
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
     </div>
   );

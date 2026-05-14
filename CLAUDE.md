@@ -1,4 +1,4 @@
-# CLAUDE.md — HOMIFY SESSION MEMORY
+# CLAUDE.md — HOMY SESSION MEMORY
 
 > Read this file at the start of every session.
 > Update "Last Session" before ending every session.
@@ -7,7 +7,7 @@
 
 ## PROJECT IDENTITY
 
-- **Product:** Homify — "Your home, finally organized"
+- **Product:** Homy — "Your home, finally organized"
 - **Type:** Household management SaaS
 - **Stack:** Next.js 14 App Router, JavaScript, MongoDB/Mongoose, Clerk auth, Tailwind CSS
 - **Target:** Shared households — flatmates, families, co-living — South/Southeast Asia first
@@ -71,7 +71,7 @@ INVITES:
 LEDGER:
   GET  /api/houses/[id]/ledger                               entries (manager=all, member=own)
   POST /api/houses/[id]/ledger                               log payment (manager)
-  PATCH /api/houses/[id]/ledger/[entryId]                   update amountPaid/method (manager) ✅ NEW
+  PATCH /api/houses/[id]/ledger/[entryId]                    update amountPaid/method (manager)
   GET  /api/houses/[id]/ledger/export                        PDF export
 
 BILLS:
@@ -81,8 +81,8 @@ BILLS:
   DELETE /api/bills/[billId]                                 delete unsplit bill (manager)
   POST /api/bills/[billId]/split                             split among members (manager)
   GET  /api/bills/[billId]/split                             list all splits + status
-  PATCH /api/bills/[billId]/split/[splitId]                 mark share paid (manager) ✅ FIXED PATH
-  GET  /api/bills/[billId]/split/[splitId]                  get single split
+  PATCH /api/bills/[billId]/split/[splitId]                  mark share paid (manager)
+  GET  /api/bills/[billId]/split/[splitId]                   get single split
 
 VAULT:
   GET  /api/houses/[id]/vault                                list (visibility-filtered, decrypted)
@@ -163,17 +163,17 @@ CRON:
 /dashboard                           house list
 /dashboard/profile                   user profile + activity
 /dashboard/create-house              create house form
-/dashboard/[houseId]                 house overview (cached, live stats)  ✅ UPDATED
-/dashboard/[houseId]/ledger          rent ledger + inline mark-paid       ✅ UPDATED
-/dashboard/[houseId]/bills           bills + split + per-member payments  ✅ UPDATED
-/dashboard/[houseId]/vault           encrypted vault
-/dashboard/[houseId]/tasks           task board
-/dashboard/[houseId]/grocery         grocery list (real-time polling)
+/dashboard/[houseId]                 house overview (cached, live stats)
+/dashboard/[houseId]/ledger          rent ledger + inline mark-paid
+/dashboard/[houseId]/bills           bills + split + per-member payments
+/dashboard/[houseId]/vault           encrypted vault (undo delete)
+/dashboard/[houseId]/tasks           task board (undo delete + toggle)
+/dashboard/[houseId]/grocery         grocery list (undo delete + toggle)
 /dashboard/[houseId]/chat            threaded chat + polls + 3s polling
-/dashboard/[houseId]/polls           standalone polls page
+/dashboard/[houseId]/polls           standalone polls page (undo close)
 /dashboard/[houseId]/members         member list + invite + documents
-/dashboard/[houseId]/rules           house rules + violation alerts
-/dashboard/[houseId]/notes           manager notes
+/dashboard/[houseId]/rules           house rules + violation alerts (undo delete)
+/dashboard/[houseId]/notes           manager notes (undo delete)
 /dashboard/[houseId]/meetings        meetings + RSVP
 /dashboard/[houseId]/moveout         move-out checklist
 /dashboard/[houseId]/settings        house settings (tabs)
@@ -184,82 +184,158 @@ CRON:
 
 ## BUGS FIXED (all sessions combined)
 
-| #   | Bug                                                                                               | Fix                                                                            |
-| --- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1   | `src/proxy.js` wrong filename                                                                     | Rename to `src/middleware.js`                                                  |
-| 2   | `src/app/api/ledger/route.js` broken orphan — uses undefined `params.id`                          | Delete this file                                                               |
-| 3   | `rules/[ruleId]/alerts/route.js` broken PATCH                                                     | Rewrite; PATCH moved to `[alertId]/route.js`                                   |
-| 4   | `notes/page.jsx` calls `DELETE /api/notes/[noteId]` — no matching route                           | Created `/api/notes/[noteId]/route.js`                                         |
-| 5   | `src/lib/sw.js` — service workers must be at root URL                                             | Moved to `public/sw.js`                                                        |
-| 6   | `memberships/.../documents/[docId]/verify/route.js` — dead code                                   | Deleted; `[docId]/route.js` handles POST (verify) + DELETE                     |
-| 7   | `User` model missing `fcmTokens` field used by push/subscribe route                               | Added `fcmTokens` array to User schema                                         |
-| 8   | Dashboard layout missing `/polls`, `/rules`, `/notes`, `/meetings`, `/moveout`, `/profile` in nav | Full rewrite of sidebar                                                        |
-| 9   | `meetings/page.jsx` calls `PATCH /api/meetings/[meetingId]` — route at wrong base path            | Created standalone `/api/meetings/[meetingId]/route.js`                        |
-| 10  | **Sidebar not fixed** — `position: sticky` inside flex container doesn't work                     | Changed to `position: fixed`, main content gets `margin-left: 220px`           |
-| 11  | **House overview no caching** — refetches all 7 endpoints on every visit                          | Module-level `CACHE` object, 30s TTL, silent background refresh                |
-| 12  | **No alert system** — urgent notifications look same as normal ones                               | `alert-pulse` CSS class, red badge pulse, alert banner on overview             |
-| 13  | **Bill split payment lifecycle broken** — `PATCH /api/bills/[billId]/splits/[splitId]` wrong path | Created correct route at `/api/bills/[billId]/split/[splitId]/route.js`        |
-| 14  | **No way to mark rent entry as paid** — ledger had no update endpoint                             | Created `PATCH /api/houses/[id]/ledger/[entryId]/route.js`; inline panel in UI |
-| 15  | **Bills page had no payment UI** — split details showed status only, no actions                   | Added `SplitPanel` + `MarkPaidModal` with per-member mark-paid flow            |
-| 16  | **Overview skeleton was basic** — showed "Loading..." text on some pages                          | Proper `OverviewSkeleton` with pulse cards matching final layout               |
+| #   | Bug                                                                             | Fix                                                              |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | `src/proxy.js` wrong filename                                                   | Rename to `src/middleware.js`                                    |
+| 2   | `src/app/api/ledger/route.js` broken orphan                                     | Delete this file                                                 |
+| 3   | `rules/[ruleId]/alerts/route.js` broken PATCH                                   | Rewrite; PATCH moved to `[alertId]/route.js`                     |
+| 4   | `notes/page.jsx` calls `DELETE /api/notes/[noteId]` — no route                  | Created `/api/notes/[noteId]/route.js`                           |
+| 5   | `src/lib/sw.js` — SW must be at root                                            | Moved to `public/sw.js`                                          |
+| 6   | `memberships/.../documents/[docId]/verify/route.js` dead code                   | Deleted; `[docId]/route.js` handles POST + DELETE                |
+| 7   | `User` model missing `fcmTokens` field                                          | Added `fcmTokens` array to User schema                           |
+| 8   | Dashboard layout missing several pages in nav                                   | Full rewrite of sidebar                                          |
+| 9   | `meetings/page.jsx` PATCH at wrong base path                                    | Created `/api/meetings/[meetingId]/route.js`                     |
+| 10  | Sidebar not fixed on scroll                                                     | `position: fixed`, main content `margin-left: 220px`             |
+| 11  | House overview no caching                                                       | Module-level `CACHE`, 30s TTL, silent background refresh         |
+| 12  | No alert system                                                                 | `alert-pulse` CSS, red badge, alert banner                       |
+| 13  | Bill split payment path wrong                                                   | Created `/api/bills/[billId]/split/[splitId]/route.js`           |
+| 14  | No way to mark rent entry as paid                                               | Created `PATCH /api/houses/[id]/ledger/[entryId]/route.js`       |
+| 15  | Bills page had no payment UI                                                    | `SplitPanel` + `MarkPaidModal` with per-member mark-paid flow    |
+| 16  | Overview skeleton was text "Loading..."                                         | Proper `OverviewSkeleton` with pulse cards                       |
+| 17  | `useUndo` had race condition — API could fire after cancel                      | Rewrote with ref-based `cancelled` flag, no stale closure issues |
+| 18  | Undo had no countdown — user didn't know how long they had                      | Live countdown in toast label: `"Task deleted (4s)"`             |
+| 19  | Undo only on tasks/grocery — missing vault, rules, notes, bills, polls, members | `usePageActions` hook covers all destructive actions             |
+| 20  | Old `useUndo` left UI broken on API failure (no revert)                         | `apiCall` failure always calls `revert()` + shows error toast    |
+| 21  | Multiple pending undos could stack and conflict                                 | New action silently cancels previous pending undo (no revert)    |
 
 ---
 
-## PAYMENT LIFECYCLE (complete, as of this session)
+## UNDO SYSTEM (complete, as of this session)
+
+### Architecture
+
+```
+src/hooks/useUndo.js          — core hook + standalone undoable() utility
+src/hooks/usePageActions.js   — all destructive actions wired with undo
+```
+
+### How it works
+
+```
+1. User clicks delete / toggle / close
+2. optimisticUpdate() fires → UI changes instantly
+3. Toast appears: "Task deleted (5s)" with [Undo] button
+4. Countdown ticks: 5 → 4 → 3 → 2 → 1
+5a. User clicks Undo → revert() called → toast dismissed → API never fires
+5b. Countdown reaches 0 → apiCall() fires
+6.  apiCall fails → revert() called → error toast shown
+```
+
+### Actions covered by undo
+
+| Page    | Action         | Message                              |
+| ------- | -------------- | ------------------------------------ |
+| Tasks   | Delete task    | `Task "Clean kitchen" deleted (5s)`  |
+| Tasks   | Toggle done    | `Task marked done (5s)`              |
+| Grocery | Delete item    | `"Eggs" removed (5s)`                |
+| Grocery | Toggle bought  | `"Eggs" marked bought (5s)`          |
+| Vault   | Delete item    | `"Home WiFi" deleted (5s)`           |
+| Rules   | Delete rule    | `Rule "No guests..." deleted (5s)`   |
+| Notes   | Delete note    | `Note "Finance update" deleted (5s)` |
+| Polls   | Close poll     | `Poll closed (5s)`                   |
+| Bills   | Delete bill    | `Bill "Electricity" deleted (5s)`    |
+| Members | Remove member  | `Rafiq removed (5s)`                 |
+| Threads | Archive thread | `#maintenance archived (5s)`         |
+
+### Key design decisions
+
+- **ref-based cancellation** — `state.cancelled` is a plain object property, not a closure variable. Avoids stale closure bugs entirely.
+- **silentCancel vs cancel** — when a new action supersedes an old one, `silentCancel()` stops the old API call without reverting the UI (since the new action already changed it). `cancel()` reverts.
+- **unmount cleanup** — `useEffect` return clears timer + interval if component unmounts during countdown (e.g. user navigates away).
+- **polling coexistence** — grocery polling checks `pendingOps` ref before overwriting items. Items with in-flight undo are skipped in merge.
+- **toast countdown** — updates every 1s via `setInterval`. Dismissed automatically when timer fires.
+
+### Usage pattern
+
+```js
+// In any page component:
+import { usePageActions } from "@/hooks/usePageActions";
+
+const { deleteTask, toggleTaskDone, deleteVaultItem } = usePageActions({
+  houseId,
+});
+
+// Delete with undo:
+function handleDelete(task) {
+  deleteTask({ taskId: task._id, taskTitle: task.title, tasks, setTasks });
+}
+
+// Toggle with undo:
+function handleToggle(task) {
+  const newStatus = task.status === "done" ? "todo" : "done";
+  toggleTaskDone({ task, newStatus, tasks, setTasks });
+}
+```
+
+### Adding undo to a new action
+
+```js
+// In usePageActions.js, add a new function:
+function deleteMyThing({ thingId, thingName, things, setThings }) {
+  const snapshot = [...things];
+  withUndo({
+    message: `"${thingName}" deleted`,
+    optimisticUpdate: () =>
+      setThings((p) => p.filter((t) => t._id !== thingId)),
+    revert: () => setThings(snapshot),
+    apiCall: () => fetch(`/api/things/${thingId}`, { method: "DELETE" }),
+  });
+}
+```
+
+---
+
+## PAYMENT LIFECYCLE (complete)
 
 ### Rent payments
 
 ```
-Manager creates ledger entry (POST /api/houses/[id]/ledger)
-  → amountPaid = 0  → status = "pending"
-  → amountPaid < amountDue → status = "partial"
-  → amountPaid >= amountDue → status = "paid"
+Manager logs entry (POST /api/houses/[id]/ledger)
+  → status auto-calculated by pre-save hook
 
-Manager updates payment (PATCH /api/houses/[id]/ledger/[entryId])
-  → pre-save hook recalculates status automatically
-  → member notified if status becomes "paid"
-  → PDF export available at any time
+Manager records payment (PATCH /api/houses/[id]/ledger/[entryId])
+  → amountPaid updated → status recalculated → member notified if paid
 ```
 
 ### Bill payments
 
 ```
-Manager creates bill (POST /api/houses/[id]/bills)
-  → isSplit = false
-
-Manager splits bill (POST /api/bills/[billId]/split)
-  → creates BillSplit per member
-  → creates LedgerEntry per member (type = "bill")
-  → each BillSplit.ledgerEntryId links to the entry
-
+Manager creates bill → splits it → BillSplit + LedgerEntry created per member
 Manager marks split paid (PATCH /api/bills/[billId]/split/[splitId])
-  → updates BillSplit.status
-  → updates linked LedgerEntry.amountPaid
-  → LedgerEntry pre-save hook recalculates status
-  → member receives in-app notification
-
-Member view
-  → sees their own LedgerEntry (status, amount)
-  → never sees managerNote or other members' entries
+  → BillSplit.status updated
+  → linked LedgerEntry.amountPaid updated
+  → pre-save hook recalculates LedgerEntry.status
+  → member gets in-app notification
 ```
 
 ---
 
 ## DECISIONS (DON'T RE-DEBATE)
 
-| Decision                                          | What                                   | Why                                    |
-| ------------------------------------------------- | -------------------------------------- | -------------------------------------- |
-| Polling not Socket.io                             | Chat + grocery use polling             | No Express server yet; upgrade Phase 3 |
-| Mongoose v7+ async hooks                          | No `next()` in pre-save                | v7 API change                          |
-| `src/middleware.js`                               | Exact path required by Next.js         | Convention                             |
-| Integers for money                                | All amounts in smallest unit (paisa)   | No float rounding bugs                 |
-| AES-256-GCM vault                                 | Server-side encryption                 | Simple and secure                      |
-| Soft delete                                       | `deletedAt` field, not actual deletion | Preserve history                       |
-| `HouseRule.js` exports `{ HouseRule, RuleAlert }` | Named exports                          | Both used together                     |
-| `Bills.js` exports `{ Bill, BillSplit }`          | Named exports                          | Both used together                     |
-| Module-level cache for overview                   | 30s TTL, silent background refresh     | Instant navigation, always fresh       |
-| Fixed sidebar via `position: fixed`               | Not sticky; main gets `margin-left`    | Only reliable cross-browser approach   |
-| Split payment path: `.../split/[splitId]`         | Nested under split resource            | RESTful, matches BillSplit entity      |
+| Decision                                      | What                                     | Why                                     |
+| --------------------------------------------- | ---------------------------------------- | --------------------------------------- |
+| Polling not Socket.io                         | Chat + grocery use polling               | No Express server yet; upgrade Phase 3  |
+| Mongoose v7+ async hooks                      | No `next()` in pre-save                  | v7 API change                           |
+| `src/middleware.js`                           | Exact path required by Next.js           | Convention                              |
+| Integers for money                            | All amounts in smallest unit (paisa)     | No float rounding bugs                  |
+| AES-256-GCM vault                             | Server-side encryption                   | Simple and secure                       |
+| Soft delete                                   | `deletedAt` field, not deletion          | Preserve history                        |
+| Module-level cache for overview               | 30s TTL, silent background refresh       | Instant navigation, always fresh        |
+| Fixed sidebar via `position: fixed`           | Not sticky; main gets `margin-left`      | Only reliable cross-browser approach    |
+| Split payment path: `.../split/[splitId]`     | Nested under split resource              | RESTful, matches BillSplit entity       |
+| ref-based undo cancellation                   | `state.cancelled` not closure variable   | No stale closure bugs                   |
+| `silentCancel` for superseded undos           | New action cancels old without reverting | Correct — new action already changed UI |
+| `usePageActions` centralises all undo actions | One file, consistent pattern             | Easy to add new actions, easy to audit  |
 
 ---
 
@@ -270,13 +346,14 @@ Member view
 3. **Always `await params`**: `const { id } = await params;` (Next.js 15 requirement)
 4. Money: store as integers (paisa/cents). Display with `Intl.NumberFormat`
 5. No `next()` in Mongoose pre-save hooks — use `async function()`
-6. Optimistic UI for grocery/tasks — always revert on API failure
+6. Optimistic UI for all destructive actions — always wire through `usePageActions`
 7. `LedgerEntry.managerNote` NEVER returned to member
 8. Vault items ALWAYS decrypted server-side before returning
 9. Route files: `route.js`. Page files: `page.jsx`
 10. `fcmTokens` stripped in `User.toSafeObject()` — never sent to client
 11. Alert styles use `.alert-pulse` class — never inline animation for reuse
-12. `CACHE` object in overview page is module-level (survives React re-renders, resets on hard reload)
+12. `CACHE` object in overview page is module-level (resets on hard reload)
+13. Every destructive action must go through `usePageActions` — no direct fetch+delete in pages
 
 ---
 
@@ -298,15 +375,15 @@ Member view
 ### Must-have before revenue
 
 1. **Stripe subscriptions** — enforce free plan limits (1 house, 6 members, 5 vault items, 1 thread)
-2. **File upload (Cloudinary)** — bill receipt photos, member document actual upload (currently URL paste only)
+2. **File upload (Cloudinary)** — bill receipt photos, member document actual upload
 3. **Push notification wiring** — register service worker + FCM token in layout
 
 ### Nice-to-have Phase 2
 
 4. **Task recurrence** — auto-create next task when recurring task marked done
 5. **Ledger pagination** — cursor-based; slow for 100+ entries
-6. **Electricity meter tracker UI** — model supports it, needs a UI section in bills page
-7. **Socket.io chat** — replace 3s polling for real-time
+6. **Electricity meter tracker UI** — model supports it, needs UI section in bills page
+7. **Socket.io chat** — replace 3s polling
 
 ### Phase 3
 
@@ -319,76 +396,87 @@ Member view
 ## PRE-LAUNCH CHECKLIST
 
 ```
-File fixes:
+File operations:
   [ ] RENAME src/proxy.js → src/middleware.js
   [ ] DELETE src/app/api/ledger/route.js
   [ ] DELETE src/app/api/memberships/[id]/documents/[docId]/verify/route.js
   [ ] DELETE src/lib/sw.js
   [ ] ADD public/sw.js
-  [ ] ADD vercel.json (cron config)
-  [ ] ADD .env.example
+  [ ] ADD vercel.json
 
-New files from this session:
-  [ ] src/app/dashboard/layout.js                              (sidebar fix + alert theme)
+New/updated files from all sessions:
+  [ ] src/hooks/useUndo.js                                     (rewritten — ref-based, countdown)
+  [ ] src/hooks/usePageActions.js                              (NEW — all undo actions)
+  [ ] src/app/dashboard/layout.js                              (fixed sidebar, alert theme, Toaster)
   [ ] src/app/dashboard/[houseId]/page.jsx                     (caching + skeletons)
   [ ] src/app/dashboard/[houseId]/ledger/page.jsx              (inline mark-paid)
   [ ] src/app/dashboard/[houseId]/bills/page.jsx               (split payments UI)
+  [ ] src/app/dashboard/[houseId]/tasks/page.jsx               (usePageActions undo)
+  [ ] src/app/dashboard/[houseId]/grocery/page.jsx             (usePageActions undo)
+  [ ] src/app/dashboard/[houseId]/rules/page.jsx               (usePageActions undo)
+  [ ] src/app/dashboard/[houseId]/notes/page.jsx               (usePageActions undo)
+  [ ] src/app/dashboard/[houseId]/vault/page.jsx               (update handleDelete to use usePageActions)
   [ ] src/app/api/bills/[billId]/split/[splitId]/route.js      (PATCH + GET)
   [ ] src/app/api/houses/[id]/ledger/[entryId]/route.js        (PATCH)
-  [ ] Append alert CSS to src/app/globals.css
+  [ ] src/app/globals.css                                       (append alert + undo toast CSS)
 
-Environment:
-  [ ] MONGODB_URI set and Atlas cluster accessible
-  [ ] CLERK_SECRET_KEY + CLERK_WEBHOOK_SECRET set
-  [ ] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY set
-  [ ] VAULT_ENCRYPTION_KEY set (64-char hex)
-  [ ] NEXT_PUBLIC_APP_URL set to production domain
-  [ ] CRON_SECRET set
-  [ ] RESEND_API_KEY set
-  [ ] TWILIO_* set
-  [ ] FIREBASE_SERVICE_ACCOUNT_JSON set
+Toaster update in layout.js:
+  [ ] Replace <Toaster> with TOASTER_PROPS from toaster_config.js
+  [ ] Add sonner CSS overrides to globals.css
 
-Clerk Dashboard:
-  [ ] Webhook: https://yourdomain.com/api/webhooks/clerk
-  [ ] Events: user.created, user.updated, user.deleted
-  [ ] Phone number auth enabled
+Environment variables:
+  [ ] MONGODB_URI
+  [ ] CLERK_SECRET_KEY + CLERK_WEBHOOK_SECRET
+  [ ] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  [ ] VAULT_ENCRYPTION_KEY (64-char hex)
+  [ ] NEXT_PUBLIC_APP_URL
+  [ ] CRON_SECRET
+  [ ] RESEND_API_KEY
+  [ ] TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_PHONE_NUMBER
+  [ ] FIREBASE_SERVICE_ACCOUNT_JSON
 
 Testing:
   [ ] npm run build — zero errors
-  [ ] Sign up → create house → invite member → accept flow
-  [ ] Log rent → inline mark paid → member sees status change
-  [ ] Create bill → split → mark each member paid → ledger updated
-  [ ] Sidebar stays fixed on scroll
+  [ ] Delete a task → undo within 5s → task restored → no API call fired
+  [ ] Delete a task → wait 5s → task gone → API called → DB updated
+  [ ] Delete a task → API fails → task restored → error toast shown
+  [ ] Two deletes in quick succession → only second one pending → first silently cancelled
+  [ ] Navigate away during countdown → component unmounts → timer cleared → no orphan API call
+  [ ] Sidebar fixed on scroll (desktop)
   [ ] Alert pulse visible on overdue items
   [ ] Overview page loads from cache on back-navigation
+  [ ] Bill split → mark paid → member ledger updated → notification sent
 ```
 
 ---
 
 ## SESSION LOG
 
-| Date            | What was done                                                                                                                                                                                              |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Early sessions  | Foundation: models, auth, house creation, dashboard shell                                                                                                                                                  |
-| Mid sessions    | Ledger, Vault, Tasks, Members, Settings — all working                                                                                                                                                      |
-| Bug fix session | Middleware rename, Mongoose hook fix, emoji removal, nav routing fix                                                                                                                                       |
-| Session 4       | Grocery + Chat real implementations, architecture docs                                                                                                                                                     |
-| Session 5       | Bills splitting API, Polls, Notifications, PDF export, Move-out, Rules, Notes, Meetings                                                                                                                    |
-| Session 6       | Fixed sidebar (position:fixed), house overview caching + skeletons, red alert system, complete payment lifecycle (bill splits + rent mark-paid), new API routes for PATCH ledger entry + PATCH split by ID |
+| Date      | What was done                                                                                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session 1 | Foundation: models, auth, house creation, dashboard shell                                                                                                                       |
+| Session 2 | Ledger, Vault, Tasks, Members, Settings                                                                                                                                         |
+| Session 3 | Middleware rename, Mongoose hook fix, emoji removal, nav routing fix                                                                                                            |
+| Session 4 | Grocery + Chat, architecture docs                                                                                                                                               |
+| Session 5 | Bills splitting, Polls, Notifications, PDF export, Move-out, Rules, Notes, Meetings                                                                                             |
+| Session 6 | Fixed sidebar, house overview caching + skeletons, red alert system, complete payment lifecycle                                                                                 |
+| Session 7 | Rewrote useUndo (ref-based, countdown, silentCancel), usePageActions hook, undo on all destructive actions: tasks, grocery, vault, rules, notes, polls, bills, members, threads |
 
 ---
 
 ## LAST SESSION
 
-**What was built/fixed:**
+**What was built:**
 
-1. **Sidebar** — `position: fixed` with `margin-left: 220px` on main content. Mobile overlay unchanged.
-2. **House overview caching** — module-level `CACHE` with 30s TTL. Instant render on navigation, silent background refresh.
-3. **Overview skeletons** — `OverviewSkeleton` with pulse card grid matching actual layout. `CardSkeleton` for each section.
-4. **Alert system** — `.alert-pulse`, `.alert-pulse-badge`, `.border-urgent`, `.row-overdue` CSS classes. Red pulsing dot on overdue items. Bell badge pulses red when urgent notifications exist. Alert banner on overview page.
-5. **Bill split payment lifecycle** — `SplitPanel` shows per-member payment status + "Mark Paid" button. `MarkPaidModal` records amount + method. `PATCH /api/bills/[billId]/split/[splitId]` updates `BillSplit` + linked `LedgerEntry`. Member notified.
-6. **Rent mark-paid** — inline `MarkPaidPanel` below each pending/partial ledger row. `PATCH /api/houses/[id]/ledger/[entryId]` updates entry, pre-save hook recalculates status, member notified if fully paid.
+1. **`useUndo` rewrite** — ref-based `cancelled` flag eliminates stale closure race condition. Live countdown in toast (`5s → 4s → ...`). `silentCancel` for superseded actions. Unmount cleanup via `useEffect` return. Both hook and standalone `undoable()` utility exported.
+
+2. **`usePageActions` hook** — single file centralising all destructive actions: `deleteTask`, `toggleTaskDone`, `deleteGroceryItem`, `toggleGroceryBought`, `deleteVaultItem`, `deleteRule`, `deleteNote`, `closePoll`, `deleteBill`, `archiveThread`, `removeMember`. All follow the same pattern: snapshot → optimisticUpdate → undo toast → apiCall on expiry.
+
+3. **Updated pages** — Tasks, Grocery, Rules, Notes fully rewritten to use `usePageActions`. Vault diff provided. All `confirm()` dialogs removed (replaced by undo).
+
+4. **Toaster config** — `TOASTER_PROPS` with styled Undo button (teal), countdown duration synced to delay, `expand: true`, `closeButton: true`.
 
 **Start next session with:** Stripe subscription enforcement (free plan limits).
 
 we have to add proper skeleton loaders in every page.jsx.
+we have to plan for make it in multiple languages like Bengali, Hindi, Pakistani

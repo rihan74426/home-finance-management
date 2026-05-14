@@ -1,6 +1,8 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { TOASTER_PROPS } from "@/lib/toasterConfig"; // or copy inline
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,6 +60,7 @@ export default function RootLayout({ children }) {
                 fontSize: "0.875rem",
               },
             }}
+            {...TOASTER_PROPS}
           />
         </body>
       </html>
