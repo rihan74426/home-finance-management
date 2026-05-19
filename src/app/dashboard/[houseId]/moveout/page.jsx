@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { MoveoutSkeleton } from "@/components/ui/Skeleton";
 import {
   LogOut,
   Check,
@@ -418,12 +419,7 @@ export default function MoveOutPage() {
     }
   }
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading…
-      </div>
-    );
+  if (loading) return <MoveoutSkeleton />;
 
   const checklists = isManager
     ? Array.isArray(data)

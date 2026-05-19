@@ -1,38 +1,32 @@
 "use client";
 
 /**
- * useUndo — Production-grade optimistic undo hook
+ * useUndo — Optimistic undo hook
+ *
+ * Key design: uses a FIXED toast ID per action so sonner updates the
+ * existing toast in-place every second. No new toasts are created during
+ * countdown — zero stacking/overlay.
  *
  * Flow:
- *   1. optimisticUpdate() fires immediately — UI changes at once
- *   2. Toast appears with live countdown + Undo button
- *   3. If user clicks Undo → revert() is called, timer cancelled, API never fires
- *   4. If countdown expires → apiCall() fires
- *   5. If apiCall() throws → revert() is called, error toast shown
- *
- * Key fixes over previous version:
- *   - Uses a ref-based cancelled flag so closure captures the latest value
- *   - Countdown interval updates the toast label live (5…4…3…2…1)
- *   - Only one pending undo per hook instance (new action cancels old one silently)
- *   - apiCall failure always reverts + shows error, never leaves UI in broken state
- *   - Exported as both hook (useUndo) and standalone util (undoable)
+ *   1. optimisticUpdate() fires immediately
+ *   2. Single toast shown with countdown, updated every second
+ *   3. User clicks Undo → revert() called, API never fires
+ *   4. Countdown expires → apiCall() fires
+ *   5. apiCall() fails → revert() called, error toast shown
  */
 
 import { toast } from "sonner";
 import { useCallback, useRef, useEffect } from "react";
 
-// Default delay in ms
 const DEFAULT_DELAY = 5000;
 
 export function useUndo(delayMs = DEFAULT_DELAY) {
-  // Track any in-flight undo so we can cancel it when a new action fires
   const pendingRef = useRef(null);
 
-  // Cancel pending undo on unmount (e.g. user navigates away)
   useEffect(() => {
     return () => {
       if (pendingRef.current) {
-        pendingRef.current.cancel();
+        pendingRef.current.silentCancel();
         pendingRef.current = null;
       }
     };
@@ -48,38 +42,43 @@ export function useUndo(delayMs = DEFAULT_DELAY) {
       onError,
       delay = delayMs,
     }) => {
-      // Cancel any previous pending undo silently (its API will NOT fire)
+      // Cancel any previous pending undo silently (no UI revert)
       if (pendingRef.current) {
         pendingRef.current.silentCancel();
         pendingRef.current = null;
       }
 
-      // Apply optimistic update immediately
       optimisticUpdate();
 
-      // Shared mutable state via ref object (avoids stale closure issues)
+      const toastId = `undo-${Date.now()}`;
       const state = {
         cancelled: false,
-        toastId: null,
-        timerId: null,
-        countdownId: null,
         secondsLeft: Math.ceil(delay / 1000),
+        timerId: null,
+        intervalId: null,
       };
 
-      function cleanup() {
+      const show = (secs) => {
+        toast(`${message} (${secs}s)`, {
+          id: toastId,
+          duration: secs * 1000 + 500,
+          action: { label: "Undo", onClick: cancel },
+        });
+      };
+
+      const cleanup = () => {
         clearTimeout(state.timerId);
-        clearInterval(state.countdownId);
-        if (state.toastId) toast.dismiss(state.toastId);
-      }
+        clearInterval(state.intervalId);
+        toast.dismiss(toastId);
+      };
 
       function silentCancel() {
-        // Cancel without reverting — used when a newer action supersedes this one
         state.cancelled = true;
         cleanup();
       }
 
       function cancel() {
-        // Undo — cancel + revert
+        if (state.cancelled) return;
         state.cancelled = true;
         cleanup();
         revert();
@@ -87,38 +86,24 @@ export function useUndo(delayMs = DEFAULT_DELAY) {
         pendingRef.current = null;
       }
 
-      // Show toast with countdown
-      state.toastId = toast(buildMessage(message, state.secondsLeft), {
-        duration: delay + 500,
-        action: {
-          label: "Undo",
-          onClick: cancel,
-        },
-      });
+      // Show first toast
+      show(state.secondsLeft);
 
-      // Countdown interval — updates toast label every second
-      state.countdownId = setInterval(() => {
+      // Update same toast every second — no new toast created
+      state.intervalId = setInterval(() => {
         state.secondsLeft -= 1;
-        if (state.secondsLeft <= 0) {
-          clearInterval(state.countdownId);
-          return;
+        if (state.secondsLeft > 0) {
+          show(state.secondsLeft);
+        } else {
+          clearInterval(state.intervalId);
         }
-        // Re-render toast with updated countdown
-        toast(buildMessage(message, state.secondsLeft), {
-          id: state.toastId,
-          duration: state.secondsLeft * 1000 + 200,
-          action: {
-            label: "Undo",
-            onClick: cancel,
-          },
-        });
       }, 1000);
 
       // Fire API after delay
       state.timerId = setTimeout(async () => {
-        clearInterval(state.countdownId);
+        clearInterval(state.intervalId);
+        toast.dismiss(toastId);
         if (state.cancelled) return;
-
         try {
           const result = await apiCall();
           if (!state.cancelled && onSuccess) onSuccess(result);
@@ -132,14 +117,11 @@ export function useUndo(delayMs = DEFAULT_DELAY) {
             if (onError) onError(err);
           }
         } finally {
-          if (state.toastId) toast.dismiss(state.toastId);
           pendingRef.current = null;
         }
       }, delay);
 
       pendingRef.current = { cancel, silentCancel };
-
-      // Return cancel handle so callers can cancel programmatically
       return { cancel, silentCancel };
     },
     [delayMs]
@@ -148,15 +130,6 @@ export function useUndo(delayMs = DEFAULT_DELAY) {
   return { withUndo };
 }
 
-// ── Countdown label helper ────────────────────────────────────────────────────
-function buildMessage(message, secondsLeft) {
-  return `${message} (${secondsLeft}s)`;
-}
-
-/**
- * Standalone undoable() — for use outside React components
- * (e.g. in event handlers passed down from server components)
- */
 export function undoable({
   message,
   optimisticUpdate,
@@ -168,47 +141,45 @@ export function undoable({
 }) {
   optimisticUpdate();
 
+  const toastId = `undo-${Date.now()}`;
   const state = {
     cancelled: false,
-    toastId: null,
-    timerId: null,
-    countdownId: null,
     secondsLeft: Math.ceil(delay / 1000),
+    timerId: null,
+    intervalId: null,
   };
 
-  function cleanup() {
+  const show = (secs) =>
+    toast(`${message} (${secs}s)`, {
+      id: toastId,
+      duration: secs * 1000 + 500,
+      action: { label: "Undo", onClick: cancel },
+    });
+  const cleanup = () => {
     clearTimeout(state.timerId);
-    clearInterval(state.countdownId);
-    if (state.toastId) toast.dismiss(state.toastId);
-  }
+    clearInterval(state.intervalId);
+    toast.dismiss(toastId);
+  };
 
   function cancel() {
+    if (state.cancelled) return;
     state.cancelled = true;
     cleanup();
     revert();
     toast.success("Action undone.", { duration: 2000 });
   }
 
-  state.toastId = toast(buildMessage(message, state.secondsLeft), {
-    duration: delay + 500,
-    action: { label: "Undo", onClick: cancel },
-  });
+  show(state.secondsLeft);
 
-  state.countdownId = setInterval(() => {
+  state.intervalId = setInterval(() => {
     state.secondsLeft -= 1;
-    if (state.secondsLeft <= 0) {
-      clearInterval(state.countdownId);
-      return;
-    }
-    toast(buildMessage(message, state.secondsLeft), {
-      id: state.toastId,
-      duration: state.secondsLeft * 1000 + 200,
-      action: { label: "Undo", onClick: cancel },
-    });
+    if (state.secondsLeft > 0) show(state.secondsLeft);
+    else clearInterval(state.intervalId);
   }, 1000);
 
   state.timerId = setTimeout(async () => {
-    clearInterval(state.countdownId);
+    clearInterval(state.intervalId);
+    toast.dismiss(toastId);
     if (state.cancelled) return;
     try {
       const result = await apiCall();
@@ -221,8 +192,6 @@ export function undoable({
         });
         if (onError) onError(err);
       }
-    } finally {
-      if (state.toastId) toast.dismiss(state.toastId);
     }
   }, delay);
 

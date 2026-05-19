@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { usePageActions } from "@/hooks/usePageActions";
+import { NotesSkeleton } from "@/components/ui/Skeleton";
 
 const CATEGORY_CONFIG = {
   general: { label: "General", color: "var(--teal)" },
@@ -265,7 +266,6 @@ export default function NotesPage() {
     }
   }
 
-  // ── Undo-enabled delete ───────────────────────────────────────────────────
   function handleDelete(note) {
     deleteNote({
       noteId: note._id,
@@ -281,39 +281,10 @@ export default function NotesPage() {
     return true;
   });
 
-  if (loading)
-    return (
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}
-        >
-          <div
-            className="sk"
-            style={{ width: 100, height: 28, borderRadius: 6 }}
-          />
-          <div
-            className="sk"
-            style={{ width: 110, height: 36, borderRadius: 50 }}
-          />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="sk"
-            style={{ height: 90, borderRadius: 13, marginBottom: 8 }}
-          />
-        ))}
-        <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-      </div>
-    );
+  if (loading) return <NotesSkeleton />;
 
   return (
     <div>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -370,7 +341,6 @@ export default function NotesPage() {
         )}
       </div>
 
-      {/* Filter tabs — manager only */}
       {isManager && (
         <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
           {[
@@ -400,7 +370,6 @@ export default function NotesPage() {
         </div>
       )}
 
-      {/* Add note modal */}
       {showForm && (
         <div
           style={{
@@ -451,7 +420,6 @@ export default function NotesPage() {
               onSubmit={handleCreate}
               style={{ display: "flex", flexDirection: "column", gap: 13 }}
             >
-              {/* Visibility toggle */}
               <div>
                 <label style={lS}>Visibility</label>
                 <div
@@ -628,7 +596,6 @@ export default function NotesPage() {
         </div>
       )}
 
-      {/* Notes list */}
       {filtered.length === 0 ? (
         <div
           style={{

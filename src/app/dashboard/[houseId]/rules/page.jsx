@@ -1,11 +1,5 @@
 "use client";
 
-/**
- * Rules page — undo-enabled delete
- * Drop-in replacement for src/app/dashboard/[houseId]/rules/page.jsx
- * Only the delete and resolve-alert actions are undo-enabled.
- */
-
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -19,6 +13,7 @@ import {
   Flag,
 } from "lucide-react";
 import { usePageActions } from "@/hooks/usePageActions";
+import { RulesSkeleton } from "@/components/ui/Skeleton";
 
 const CATEGORY_CONFIG = {
   quiet_hours: { label: "Quiet Hours", color: "#a78bfa" },
@@ -29,13 +24,6 @@ const CATEGORY_CONFIG = {
   common_areas: { label: "Common Areas", color: "#f472b6" },
   security: { label: "Security", color: "#f87171" },
   other: { label: "Other", color: "var(--muted)" },
-};
-
-const ALERT_STATUS = {
-  open: { label: "Open", color: "#f87171" },
-  acknowledged: { label: "Acknowledged", color: "#fbbf24" },
-  resolved: { label: "Resolved", color: "#4ade80" },
-  dismissed: { label: "Dismissed", color: "var(--muted)" },
 };
 
 const iS = {
@@ -78,7 +66,6 @@ function RuleCard({ rule, isManager, onDelete, onReport }) {
           gap: 14,
         }}
       >
-        {/* Number badge */}
         <div
           style={{
             width: 36,
@@ -243,19 +230,14 @@ export default function RulesPage() {
     }
   }
 
-  // ── Undo-enabled delete ───────────────────────────────────────────────────
   function handleDelete(rule) {
     deleteRule({ ruleId: rule._id, ruleTitle: rule.title, rules, setRules });
   }
 
-  // ── Undo-enabled alert resolve ────────────────────────────────────────────
   function resolveAlert(alertId, status) {
     const snapshot = [...alerts];
-    // optimistic: remove from open list
     setAlerts((p) => p.filter((a) => a._id !== alertId));
-
     const ruleId = alerts.find((a) => a._id === alertId)?.ruleId?._id;
-
     fetch(`/api/rules/${ruleId}/alerts/${alertId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -266,9 +248,7 @@ export default function RulesPage() {
         if (!j.success) {
           setAlerts(snapshot);
           toast.error(j.error || "Failed to update alert.");
-        } else {
-          toast.success(`Alert ${status}.`);
-        }
+        } else toast.success(`Alert ${status}.`);
       })
       .catch(() => {
         setAlerts(snapshot);
@@ -301,39 +281,10 @@ export default function RulesPage() {
     }
   }
 
-  if (loading)
-    return (
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}
-        >
-          <div
-            className="sk"
-            style={{ width: 140, height: 28, borderRadius: 6 }}
-          />
-          <div
-            className="sk"
-            style={{ width: 100, height: 36, borderRadius: 50 }}
-          />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="sk"
-            style={{ height: 70, borderRadius: 12, marginBottom: 8 }}
-          />
-        ))}
-        <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-      </div>
-    );
+  if (loading) return <RulesSkeleton />;
 
   return (
     <div>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -740,7 +691,6 @@ export default function RulesPage() {
         </div>
       )}
 
-      {/* Rules list */}
       {rules.length === 0 ? (
         <div
           style={{

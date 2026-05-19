@@ -22,6 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import { BILL_TYPE, BILL_SPLIT_TYPE, PAYMENT_METHOD } from "@/lib/constants";
+import { BillsSkeleton } from "@/components/ui/Skeleton";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
@@ -96,39 +97,6 @@ const lS = {
   textTransform: "uppercase",
   letterSpacing: "0.05em",
 };
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function BillsSkeleton() {
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
-      >
-        <div
-          className="sk"
-          style={{ width: 80, height: 28, borderRadius: 6 }}
-        />
-        <div
-          className="sk"
-          style={{ width: 100, height: 36, borderRadius: 50 }}
-        />
-      </div>
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="sk"
-          style={{ height: 72, borderRadius: 14, marginBottom: 8 }}
-        />
-      ))}
-      <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-    </div>
-  );
-}
 
 // ── Mark Paid Modal ───────────────────────────────────────────────────────────
 // Shown when manager clicks "Mark Paid" on a split row
@@ -688,7 +656,8 @@ export default function BillsPage() {
       customSplits: members.map((m) => ({
         membershipId: m.membershipId,
         name: m.name,
-        shareAmount: Math.floor(bill.totalAmount / members.length),
+        // show amounts in currency units in the UI (convert from cents)
+        shareAmount: Math.floor(bill.totalAmount / members.length) / 100,
       })),
     });
   }
@@ -696,11 +665,12 @@ export default function BillsPage() {
   async function runSplit(bill) {
     const isCustom = splitForm.type === "custom";
     if (isCustom) {
-      const total = splitForm.customSplits.reduce(
-        (s, c) => s + (parseInt(c.shareAmount) || 0),
+      // compute total in cents for accurate comparison
+      const totalCents = splitForm.customSplits.reduce(
+        (s, c) => s + Math.round((parseFloat(c.shareAmount) || 0) * 100),
         0
       );
-      if (total !== bill.totalAmount) {
+      if (totalCents !== bill.totalAmount) {
         toast.error(
           `Splits must total ${fmtCurrency(bill.totalAmount, house?.currency)}.`
         );
@@ -716,7 +686,8 @@ export default function BillsPage() {
           splits: isCustom
             ? splitForm.customSplits.map((s) => ({
                 membershipId: s.membershipId,
-                shareAmount: parseInt(s.shareAmount),
+                // convert units back to cents
+                shareAmount: Math.round((parseFloat(s.shareAmount) || 0) * 100),
               }))
             : undefined,
         }),
@@ -1279,14 +1250,16 @@ export default function BillsPage() {
                           style={{ ...iS, width: 120 }}
                           type="number"
                           min="0"
-                          step="1"
+                          step="0.01"
                           value={s.shareAmount}
                           onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
+                            const val = parseFloat(e.target.value);
                             setSplitForm((p) => ({
                               ...p,
                               customSplits: p.customSplits.map((c, ci) =>
-                                ci === i ? { ...c, shareAmount: val } : c
+                                ci === i
+                                  ? { ...c, shareAmount: isNaN(val) ? "" : val }
+                                  : c
                               ),
                             }));
                           }}
@@ -1294,11 +1267,14 @@ export default function BillsPage() {
                       </div>
                     ))}
                     {(() => {
-                      const total = splitForm.customSplits.reduce(
-                        (s, c) => s + (parseInt(c.shareAmount) || 0),
+                      // compute total in cents to compare to bill.totalAmount (which is cents)
+                      const totalCents = splitForm.customSplits.reduce(
+                        (s, c) =>
+                          s +
+                          Math.round((parseFloat(c.shareAmount) || 0) * 100),
                         0
                       );
-                      const diff = bill.totalAmount - total;
+                      const diff = bill.totalAmount - totalCents;
                       return (
                         <div
                           style={{

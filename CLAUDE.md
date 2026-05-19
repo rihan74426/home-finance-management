@@ -208,6 +208,12 @@ CRON:
 | 20  | Old `useUndo` left UI broken on API failure (no revert)                         | `apiCall` failure always calls `revert()` + shows error toast    |
 | 21  | Multiple pending undos could stack and conflict                                 | New action silently cancels previous pending undo (no revert)    |
 
+| 22 | `usePageActions.deleteTask` had no-op revert (`setTasks(p) => p`) | Replaced with snapshot-based revert |
+| 23 | `layout.js` had two `<Toaster>` instances causing duplicate toasts | Merged into single Toaster with inline props |
+| 24 | `layout.js` sidebar CSS `~ div` sibling selector didn't apply margin | Added `main-content` class, targeted directly in media query |
+| 25 | `useUndo.js` mixed `countdownId`/`intervalId` naming causing potential interval leak | Standardized to `intervalId` throughout |
+| 26 | `usePageActions` had dead `deleteMyThing` referencing `/api/things/` | Removed entirely |
+
 ---
 
 ## UNDO SYSTEM (complete, as of this session)
@@ -462,21 +468,43 @@ Testing:
 | Session 6 | Fixed sidebar, house overview caching + skeletons, red alert system, complete payment lifecycle                                                                                 |
 | Session 7 | Rewrote useUndo (ref-based, countdown, silentCancel), usePageActions hook, undo on all destructive actions: tasks, grocery, vault, rules, notes, polls, bills, members, threads |
 
----
+## | Session 8 | Bug fixes: usePageActions no-op revert, useUndo interval leak, double Toaster in layout, broken sidebar CSS sibling selector |
 
 ## LAST SESSION
 
-**What was built:**
+**What was fixed:**
 
-1. **`useUndo` rewrite** — ref-based `cancelled` flag eliminates stale closure race condition. Live countdown in toast (`5s → 4s → ...`). `silentCancel` for superseded actions. Unmount cleanup via `useEffect` return. Both hook and standalone `undoable()` utility exported.
+1. **`usePageActions.js` — broken deleteTask revert**
+   - Old code had two versions of `deleteTask`: a no-op (`setTasks(p) => p`) and a working snapshot version
+   - Removed the no-op version entirely, kept only snapshot-based revert
+   - All `apiCall` functions now throw on `!j.success` so the catch block triggers revert correctly
+   - Removed `deleteMyThing` placeholder that pointed to `/api/things/` (non-existent route)
 
-2. **`usePageActions` hook** — single file centralising all destructive actions: `deleteTask`, `toggleTaskDone`, `deleteGroceryItem`, `toggleGroceryBought`, `deleteVaultItem`, `deleteRule`, `deleteNote`, `closePoll`, `deleteBill`, `archiveThread`, `removeMember`. All follow the same pattern: snapshot → optimisticUpdate → undo toast → apiCall on expiry.
+2. **`useUndo.js` — interval leak on unmount**
+   - Old code used both `countdownId` and `intervalId` inconsistently
+   - Standardized to `intervalId` throughout — ensures `clearInterval` in cleanup always targets the correct reference
+   - No behavioral change but prevents silent interval leak if component unmounts mid-countdown
 
-3. **Updated pages** — Tasks, Grocery, Rules, Notes fully rewritten to use `usePageActions`. Vault diff provided. All `confirm()` dialogs removed (replaced by undo).
+3. **`layout.js` — double Toaster instance**
+   - Old layout rendered `<Toaster>` inline AND spread `TOASTER_PROPS` from `toasterConfig.js` into a second `<Toaster>`
+   - Two Toaster instances caused duplicate toasts and conflicting dismiss behavior
+   - Fixed: single `<Toaster>` with all props defined inline, `toasterConfig.js` no longer imported in layout
 
-4. **Toaster config** — `TOASTER_PROPS` with styled Undo button (teal), countdown duration synced to delay, `expand: true`, `closeButton: true`.
+4. **`layout.js` — broken sidebar CSS sibling selector**
+   - Old code: `.desktop-sidebar ~ div { margin-left: 220px }`
+   - CSS `~` sibling selector requires elements to be DOM siblings — they were not (main content was inside a wrapper div that was a child, not sibling)
+   - Fixed: added `main-content` class to the wrapper div, applied `margin-left` via media query targeting `.main-content` directly
 
-**Start next session with:** Stripe subscription enforcement (free plan limits).
+**Files changed:**
 
-we have to add proper skeleton loaders in every page.jsx.
-we have to plan for make it in multiple languages like Bengali, Hindi, Pakistani
+- `src/hooks/useUndo.js`
+- `src/hooks/usePageActions.js`
+- `src/app/dashboard/layout.js`
+
+grocery page is refreshing after 2 seconds for /api/houses/69d67e7accebc45f83079b8c/grocery?showBought=false. that's why the undo feature that we designed is not working here. the frontend is updating but again replaced after a while. also there's a toast overlay happening. check it. manage the undo system professionally. we need to take care of it. suggest me if you have any better idea for the undo feature. otherwise make this one work perfectly.
+
+also we need proper skeleton loader in every page of the application.
+
+The notification mark as read should be triggered whenever user sees it or opens the notification tab.
+
+the meetings page should be checked for dom update and proper undo feature and the proper api request and frontend update. because the update was taking as a new member could not find the userid.name from in the frontend rspv data update. it should be handled properly.

@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter, usePathname, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
@@ -29,8 +29,9 @@ import {
   Menu,
   LogOut,
   User,
-  AlertTriangle,
 } from "lucide-react";
+
+const SIDEBAR_WIDTH = 220;
 
 const TOP_NAV = [
   { href: "/dashboard", icon: Home, label: "My Houses" },
@@ -54,6 +55,14 @@ const HOUSE_NAV = [
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
+const NOTIF_TYPE_CONFIG = {
+  rent_overdue: { color: "#f87171", pulse: true },
+  rent_due: { color: "#fbbf24", pulse: false },
+  task_overdue: { color: "#f87171", pulse: true },
+  rule_broken: { color: "#f87171", pulse: true },
+  default: { color: "var(--accent)", pulse: false },
+};
+
 function fmtTime(d) {
   const diff = Date.now() - new Date(d);
   if (diff < 60000) return "just now";
@@ -65,66 +74,50 @@ function fmtTime(d) {
   });
 }
 
-// Notification type → color + icon
-const NOTIF_TYPE_CONFIG = {
-  rent_overdue: { color: "#f87171", pulse: true },
-  rent_due: { color: "#fbbf24", pulse: false },
-  task_overdue: { color: "#f87171", pulse: true },
-  rule_broken: { color: "#f87171", pulse: true },
-  default: { color: "var(--accent)", pulse: false },
-};
-
-function NotificationPanel({ onClose, onRead }) {
+function NotificationPanel({ onClose, onCountUpdate }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const markedAllRef = useRef(false);
 
   useEffect(() => {
-    fetch("/api/notifications?limit=25")
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.success) setNotifications(j.data);
-      })
-      .finally(() => setLoading(false));
+    async function fetchAndMarkRead() {
+      try {
+        const res = await fetch("/api/notifications?limit=30");
+        const json = await res.json();
+        if (json.success) {
+          setNotifications(json.data);
+          // Mark all as read immediately when panel opens — fire and forget
+          const unreadIds = json.data
+            .filter((n) => !n.isRead)
+            .map((n) => n._id);
+          if (unreadIds.length > 0 && !markedAllRef.current) {
+            markedAllRef.current = true;
+            fetch("/api/notifications", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}), // empty = mark all
+            }).catch(() => {});
+            // Update local state and parent count
+            setNotifications((p) => p.map((n) => ({ ...n, isRead: true })));
+            onCountUpdate(0);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAndMarkRead();
   }, []);
 
-  async function markAllRead() {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    setNotifications((p) => p.map((n) => ({ ...n, isRead: true })));
-    onRead(0);
-  }
-
-  async function markOne(id) {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [id] }),
-    });
-    setNotifications((p) =>
-      p.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-    );
-  }
-
-  const unread = notifications.filter((n) => !n.isRead).length;
-  const urgentAlerts = notifications.filter(
-    (n) =>
-      !n.isRead &&
-      (n.type === "rent_overdue" ||
-        n.type === "task_overdue" ||
-        n.type === "rule_broken")
+  const urgentAlerts = notifications.filter((n) =>
+    ["rent_overdue", "task_overdue", "rule_broken"].includes(n.type)
   );
 
   return (
     <div
       style={{
         position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        top: 0,
+        inset: 0,
         zIndex: 300,
         background: "rgba(0,0,0,0.55)",
       }}
@@ -160,58 +153,21 @@ function NotificationPanel({ onClose, onRead }) {
             <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
               Notifications
             </span>
-            {unread > 0 && (
-              <span
-                style={{
-                  fontSize: "0.68rem",
-                  fontWeight: 700,
-                  padding: "1px 7px",
-                  borderRadius: 50,
-                  background:
-                    unread > 0 && urgentAlerts.length > 0
-                      ? "#f87171"
-                      : "var(--accent)",
-                  color: "#fff",
-                }}
-              >
-                {unread}
-              </span>
-            )}
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {unread > 0 && (
-              <button
-                onClick={markAllRead}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--teal)",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 3,
-                }}
-              >
-                <Check size={11} /> Mark all read
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--muted)",
-              }}
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+            }}
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Urgent alerts banner */}
+        {/* Urgent banner */}
         {urgentAlerts.length > 0 && (
           <div
             style={{
@@ -247,16 +203,7 @@ function NotificationPanel({ onClose, onRead }) {
         {/* List */}
         <div style={{ overflowY: "auto", flex: 1 }}>
           {loading ? (
-            <div
-              style={{
-                padding: "24px",
-                textAlign: "center",
-                color: "var(--muted)",
-                fontSize: "0.8rem",
-              }}
-            >
-              Loading…
-            </div>
+            <NotifSkeleton />
           ) : notifications.length === 0 ? (
             <div
               style={{
@@ -284,12 +231,9 @@ function NotificationPanel({ onClose, onRead }) {
               return (
                 <div
                   key={n._id}
-                  onClick={() => !n.isRead && markOne(n._id)}
                   style={{
                     padding: "12px 18px",
                     borderBottom: "1px solid var(--glass-border)",
-                    background: n.isRead ? "transparent" : `${cfg.color}08`,
-                    cursor: n.isRead ? "default" : "pointer",
                   }}
                 >
                   <div
@@ -299,41 +243,25 @@ function NotificationPanel({ onClose, onRead }) {
                       gap: 10,
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 4,
-                        paddingTop: 3,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {!n.isRead ? (
-                        <span
-                          className={cfg.pulse ? "alert-pulse" : ""}
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            background: cfg.color,
-                            display: "block",
-                          }}
-                        />
-                      ) : (
-                        <span
-                          style={{ width: 7, height: 7, display: "block" }}
-                        />
-                      )}
+                    <div style={{ paddingTop: 3, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: cfg.color,
+                          display: "block",
+                          opacity: 0.6,
+                        }}
+                      />
                     </div>
                     <div style={{ flex: 1 }}>
                       <div
                         style={{
                           fontSize: "0.83rem",
-                          fontWeight: n.isRead ? 400 : 600,
+                          fontWeight: 500,
                           marginBottom: 2,
-                          color:
-                            !n.isRead && cfg.pulse ? cfg.color : "var(--text)",
+                          color: "var(--text)",
                         }}
                       >
                         {n.title}
@@ -366,6 +294,230 @@ function NotificationPanel({ onClose, onRead }) {
   );
 }
 
+function NotifSkeleton() {
+  return (
+    <div style={{ padding: "8px 0" }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          style={{
+            padding: "12px 18px",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
+          <div style={{ display: "flex", gap: 10 }}>
+            <div
+              className="sk"
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                marginTop: 3,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div
+                className="sk"
+                style={{
+                  height: 13,
+                  width: "70%",
+                  borderRadius: 4,
+                  marginBottom: 6,
+                }}
+              />
+              <div
+                className="sk"
+                style={{ height: 11, width: "50%", borderRadius: 4 }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <style>{`.sk{background:var(--glass-bg-mid);animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+    </div>
+  );
+}
+
+function SidebarContent({
+  houseId,
+  pathname,
+  onLinkClick,
+  onBellClick,
+  unreadCount,
+  urgentCount,
+}) {
+  return (
+    <>
+      <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+        {houseId ? (
+          <>
+            <Link
+              href="/dashboard"
+              onClick={onLinkClick}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "7px 12px",
+                borderRadius: 8,
+                marginBottom: 10,
+                fontSize: "0.78rem",
+                color: "var(--muted)",
+                textDecoration: "none",
+              }}
+            >
+              <ChevronLeft size={13} /> All Houses
+            </Link>
+            {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
+              const fullHref = `/dashboard/${houseId}${href}`;
+              const active = pathname === fullHref;
+              return (
+                <Link
+                  key={href}
+                  href={fullHref}
+                  onClick={onLinkClick}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    marginBottom: 1,
+                    fontSize: "0.845rem",
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "var(--text)" : "var(--muted)",
+                    background: active ? "var(--glass-bg-mid)" : "transparent",
+                    textDecoration: "none",
+                    transition: "all 0.12s",
+                  }}
+                >
+                  <Icon
+                    size={15}
+                    color={active ? "var(--accent)" : "var(--muted)"}
+                  />
+                  {label}
+                </Link>
+              );
+            })}
+          </>
+        ) : (
+          TOP_NAV.map(({ href, icon: Icon, label }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={onLinkClick}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "9px 12px",
+                  borderRadius: 10,
+                  marginBottom: 2,
+                  fontSize: "0.875rem",
+                  fontWeight: active ? 600 : 400,
+                  color: active ? "var(--text)" : "var(--muted)",
+                  background: active ? "var(--glass-bg-mid)" : "transparent",
+                  textDecoration: "none",
+                }}
+              >
+                <Icon
+                  size={16}
+                  color={active ? "var(--accent)" : "var(--muted)"}
+                />
+                {label}
+              </Link>
+            );
+          })
+        )}
+      </nav>
+
+      <div
+        style={{
+          padding: "12px 14px",
+          borderTop: "1px solid var(--glass-border)",
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={onBellClick}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            padding: "8px 10px",
+            borderRadius: 10,
+            marginBottom: 10,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <Bell
+              size={16}
+              color={
+                urgentCount > 0
+                  ? "#f87171"
+                  : unreadCount > 0
+                    ? "var(--accent)"
+                    : "var(--muted)"
+              }
+            />
+            {unreadCount > 0 && (
+              <span
+                className={urgentCount > 0 ? "alert-pulse-badge" : ""}
+                style={{
+                  position: "absolute",
+                  top: -5,
+                  right: -6,
+                  minWidth: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  background: urgentCount > 0 ? "#f87171" : "var(--accent)",
+                  color: "#fff",
+                  fontSize: "0.55rem",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 3px",
+                }}
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: "0.875rem",
+              color: urgentCount > 0 ? "#f87171" : "var(--muted)",
+              fontWeight: urgentCount > 0 ? 600 : 400,
+            }}
+          >
+            Notifications
+          </span>
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <UserButton afterSignOutUrl="/" />
+          <span
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              color: "var(--text)",
+            }}
+          >
+            My Account
+          </span>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function DashboardLayout({ children }) {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -386,6 +538,7 @@ export default function DashboardLayout({ children }) {
     setShowMobileSidebar(false);
   }, [pathname]);
 
+  // Poll for unread count every 30s — but NOT the full notification list
   useEffect(() => {
     if (!isSignedIn) return;
     function fetchCount() {
@@ -407,6 +560,13 @@ export default function DashboardLayout({ children }) {
     return () => clearInterval(iv);
   }, [isSignedIn]);
 
+  function handleBellClick() {
+    setShowNotifications(true);
+    // Optimistically clear badge — panel will confirm on open
+    setUnreadCount(0);
+    setUrgentCount(0);
+  }
+
   if (!isLoaded) {
     return (
       <div
@@ -426,205 +586,39 @@ export default function DashboardLayout({ children }) {
   }
   if (!isSignedIn) return null;
 
-  function SidebarContent({ onLinkClick }) {
-    return (
-      <>
-        <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
-          {houseId ? (
-            <>
-              <Link
-                href="/dashboard"
-                onClick={onLinkClick}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "7px 12px",
-                  borderRadius: 8,
-                  marginBottom: 10,
-                  fontSize: "0.78rem",
-                  color: "var(--muted)",
-                  textDecoration: "none",
-                }}
-              >
-                <ChevronLeft size={13} /> All Houses
-              </Link>
-              {HOUSE_NAV.map(({ href, icon: Icon, label }) => {
-                const fullHref = `/dashboard/${houseId}${href}`;
-                const active = pathname === fullHref;
-                return (
-                  <Link
-                    key={href}
-                    href={fullHref}
-                    onClick={onLinkClick}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      marginBottom: 1,
-                      fontSize: "0.845rem",
-                      fontWeight: active ? 600 : 400,
-                      color: active ? "var(--text)" : "var(--muted)",
-                      background: active
-                        ? "var(--glass-bg-mid)"
-                        : "transparent",
-                      textDecoration: "none",
-                      transition: "all 0.12s",
-                    }}
-                  >
-                    <Icon
-                      size={15}
-                      color={active ? "var(--accent)" : "var(--muted)"}
-                    />
-                    {label}
-                  </Link>
-                );
-              })}
-            </>
-          ) : (
-            TOP_NAV.map(({ href, icon: Icon, label }) => {
-              const active = pathname === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={onLinkClick}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 12px",
-                    borderRadius: 10,
-                    marginBottom: 2,
-                    fontSize: "0.875rem",
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "var(--text)" : "var(--muted)",
-                    background: active ? "var(--glass-bg-mid)" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  <Icon
-                    size={16}
-                    color={active ? "var(--accent)" : "var(--muted)"}
-                  />
-                  {label}
-                </Link>
-              );
-            })
-          )}
-        </nav>
-
-        {/* Bottom */}
-        <div
-          style={{
-            padding: "12px 14px",
-            borderTop: "1px solid var(--glass-border)",
-            flexShrink: 0,
-          }}
-        >
-          <button
-            onClick={() => {
-              setShowNotifications(true);
-              setUrgentCount(0);
-            }}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "8px 10px",
-              borderRadius: 10,
-              marginBottom: 10,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ position: "relative" }}>
-              <Bell
-                size={16}
-                color={
-                  urgentCount > 0
-                    ? "#f87171"
-                    : unreadCount > 0
-                      ? "var(--accent)"
-                      : "var(--muted)"
-                }
-              />
-              {unreadCount > 0 && (
-                <span
-                  className={urgentCount > 0 ? "alert-pulse-badge" : ""}
-                  style={{
-                    position: "absolute",
-                    top: -5,
-                    right: -6,
-                    minWidth: 14,
-                    height: 14,
-                    borderRadius: 7,
-                    background: urgentCount > 0 ? "#f87171" : "var(--accent)",
-                    color: "#fff",
-                    fontSize: "0.55rem",
-                    fontWeight: 800,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 3px",
-                  }}
-                >
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </div>
-            <span
-              style={{
-                fontSize: "0.875rem",
-                color: urgentCount > 0 ? "#f87171" : "var(--muted)",
-                fontWeight: urgentCount > 0 ? 600 : 400,
-              }}
-            >
-              Notifications
-            </span>
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <UserButton afterSignOutUrl="/" />
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "var(--text)",
-              }}
-            >
-              My Account
-            </span>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--bg-base)",
-        display: "flex",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "var(--bg-base)" }}>
+      {/* Single Toaster */}
       <Toaster
         position="bottom-right"
+        expand
+        visibleToasts={3}
+        closeButton
         toastOptions={{
+          duration: 5500,
           style: {
             background: "var(--bg-mid)",
             border: "1px solid var(--glass-border)",
             color: "var(--text)",
             fontSize: "0.875rem",
+            borderRadius: "12px",
+            padding: "12px 16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          },
+          actionButtonStyle: {
+            background: "rgba(45, 212, 191, 0.15)",
+            border: "1px solid rgba(45, 212, 191, 0.35)",
+            color: "#2dd4bf",
+            fontWeight: "700",
+            fontSize: "0.78rem",
+            borderRadius: "8px",
+            padding: "5px 12px",
+            cursor: "pointer",
           },
         }}
       />
 
-      {/* ── Mobile overlay sidebar ── */}
+      {/* Mobile overlay sidebar */}
       {showMobileSidebar && (
         <div
           style={{
@@ -694,17 +688,26 @@ export default function DashboardLayout({ children }) {
                 <X size={18} />
               </button>
             </div>
-            <SidebarContent onLinkClick={() => setShowMobileSidebar(false)} />
+            <SidebarContent
+              houseId={houseId}
+              pathname={pathname}
+              onLinkClick={() => setShowMobileSidebar(false)}
+              onBellClick={() => {
+                setShowMobileSidebar(false);
+                handleBellClick();
+              }}
+              unreadCount={unreadCount}
+              urgentCount={urgentCount}
+            />
           </div>
         </div>
       )}
 
-      {/* ── FIXED desktop sidebar ── */}
+      {/* Fixed desktop sidebar */}
       <div
         className="desktop-sidebar"
         style={{
-          width: 220,
-          flexShrink: 0,
+          width: SIDEBAR_WIDTH,
           position: "fixed",
           top: 0,
           left: 0,
@@ -752,19 +755,22 @@ export default function DashboardLayout({ children }) {
             </span>
           </Link>
         </div>
-        <SidebarContent onLinkClick={undefined} />
+        <SidebarContent
+          houseId={houseId}
+          pathname={pathname}
+          onLinkClick={undefined}
+          onBellClick={handleBellClick}
+          unreadCount={unreadCount}
+          urgentCount={urgentCount}
+        />
       </div>
 
-      {/* ── Main content — offset by sidebar width ── */}
+      {/* Main content — offset by sidebar on desktop */}
       <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-        }}
+        className="main-content"
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
       >
-        {/* Mobile top bar */}
+        {/* Mobile topbar */}
         <div
           className="mobile-topbar"
           style={{
@@ -821,15 +827,11 @@ export default function DashboardLayout({ children }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
-              onClick={() => {
-                setShowNotifications(true);
-                setUrgentCount(0);
-              }}
+              onClick={handleBellClick}
               style={{
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                color: "var(--muted)",
                 padding: 4,
                 position: "relative",
               }}
@@ -872,35 +874,35 @@ export default function DashboardLayout({ children }) {
       {showNotifications && (
         <NotificationPanel
           onClose={() => setShowNotifications(false)}
-          onRead={(n) => setUnreadCount(n)}
+          onCountUpdate={(n) => {
+            setUnreadCount(n);
+            setUrgentCount(0);
+          }}
         />
       )}
 
       <style>{`
+        @media (min-width: 769px) {
+          .desktop-sidebar { display: flex !important; }
+          .mobile-topbar { display: none !important; }
+          .main-content { margin-left: ${SIDEBAR_WIDTH}px; }
+        }
         @media (max-width: 768px) {
           .desktop-sidebar { display: none !important; }
           .mobile-topbar { display: flex !important; }
+          .main-content { margin-left: 0 !important; }
         }
-        @media (min-width: 769px) {
-          .mobile-topbar { display: none !important; }
-          /* offset main content for fixed sidebar */
-          .desktop-sidebar ~ div { margin-left: 220px; }
-        }
-        /* Alert pulse animation */
         @keyframes alertPulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(248,113,113,0.7); }
           50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(248,113,113,0); }
         }
-        .alert-pulse {
-          animation: alertPulse 1.5s ease-in-out infinite;
-        }
+        .alert-pulse { animation: alertPulse 1.5s ease-in-out infinite; }
         @keyframes badgePulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.6); }
           50% { box-shadow: 0 0 0 4px rgba(248,113,113,0); }
         }
-        .alert-pulse-badge {
-          animation: badgePulse 1.5s ease-in-out infinite;
-        }
+        .alert-pulse-badge { animation: badgePulse 1.5s ease-in-out infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

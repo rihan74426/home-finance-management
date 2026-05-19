@@ -1,18 +1,14 @@
 "use client";
 
-/**
- * Skeleton — pulse placeholder for loading states.
- * Usage: <Skeleton width={200} height={20} />
- *        <Skeleton style={{ borderRadius: 50 }} />
- */
-export function Skeleton({ width, height, style = {}, className = "" }) {
+// ── Base pulse skeleton block ─────────────────────────────────────────────────
+export function Skeleton({ width, height, style = {}, rounded = false }) {
   return (
     <div
-      className={`skeleton ${className}`}
+      className="sk"
       style={{
         width: width || "100%",
         height: height || 16,
-        borderRadius: 6,
+        borderRadius: rounded ? 50 : 6,
         background: "var(--glass-bg-mid)",
         ...style,
       }}
@@ -20,27 +16,134 @@ export function Skeleton({ width, height, style = {}, className = "" }) {
   );
 }
 
-/**
- * PageSkeleton — full-page skeleton patterns for each section.
- */
+// ── Shared helpers ────────────────────────────────────────────────────────────
+function SkRow({ count = 4, height = 64, gap = 8, radius = 12 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{
+            height,
+            borderRadius: radius,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SkHeader() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24,
+      }}
+    >
+      <div>
+        <div
+          className="sk"
+          style={{
+            width: 140,
+            height: 26,
+            borderRadius: 6,
+            marginBottom: 8,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+        <div
+          className="sk"
+          style={{
+            width: 100,
+            height: 13,
+            borderRadius: 6,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      </div>
+      <div
+        className="sk"
+        style={{
+          width: 110,
+          height: 36,
+          borderRadius: 50,
+          background: "var(--glass-bg-mid)",
+        }}
+      />
+    </div>
+  );
+}
+
+function SkStyles() {
+  return (
+    <style>{`.sk{animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+  );
+}
+
+// ── Page skeletons ────────────────────────────────────────────────────────────
+
 export function LedgerSkeleton() {
   return (
     <div>
-      <SkeletonHeader />
+      <SkHeader />
+      {/* Stats row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4,1fr)",
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 72,
+              borderRadius: 12,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      <SkRow count={5} height={76} />
+      <SkStyles />
+    </div>
+  );
+}
+
+export function BillsSkeleton() {
+  return (
+    <div>
+      <SkHeader />
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3,1fr)",
-          gap: 12,
-          marginBottom: 24,
+          gap: 10,
+          marginBottom: 22,
         }}
       >
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} height={72} style={{ borderRadius: 12 }} />
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 72,
+              borderRadius: 12,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
         ))}
       </div>
-      <SkeletonList count={5} height={72} />
-      <SkeletonStyles />
+      <SkRow count={4} height={72} />
+      <SkStyles />
     </div>
   );
 }
@@ -48,14 +151,23 @@ export function LedgerSkeleton() {
 export function VaultSkeleton() {
   return (
     <div>
-      <SkeletonHeader />
+      <SkHeader />
       {[1, 2].map((g) => (
-        <div key={g} style={{ marginBottom: 24 }}>
-          <Skeleton width={80} height={12} style={{ marginBottom: 10 }} />
-          <SkeletonList count={2} height={64} />
+        <div key={g} style={{ marginBottom: 28 }}>
+          <div
+            className="sk"
+            style={{
+              width: 80,
+              height: 12,
+              borderRadius: 6,
+              marginBottom: 10,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+          <SkRow count={2} height={64} gap={7} />
         </div>
       ))}
-      <SkeletonStyles />
+      <SkStyles />
     </div>
   );
 }
@@ -63,41 +175,57 @@ export function VaultSkeleton() {
 export function TasksSkeleton() {
   return (
     <div>
-      <SkeletonHeader />
+      <SkHeader />
+      {/* Filter pills */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[1, 2, 3].map((i) => (
-          <Skeleton
+          <div
             key={i}
-            width={70}
-            height={32}
-            style={{ borderRadius: 50 }}
+            className="sk"
+            style={{
+              width: 70,
+              height: 32,
+              borderRadius: 50,
+              background: "var(--glass-bg-mid)",
+            }}
           />
         ))}
       </div>
-      <SkeletonList count={4} height={68} />
-      <SkeletonStyles />
+      <SkRow count={5} height={68} gap={7} />
+      <SkStyles />
     </div>
   );
 }
 
 export function GrocerySkeleton() {
   return (
-    <div>
-      <SkeletonHeader />
+    <div style={{ maxWidth: 640 }}>
+      <SkHeader />
+      {/* Category pills */}
       <div
-        style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}
+        style={{
+          display: "flex",
+          gap: 6,
+          marginBottom: 18,
+          overflow: "hidden",
+        }}
       >
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
             key={i}
-            width={70}
-            height={28}
-            style={{ borderRadius: 50 }}
+            className="sk"
+            style={{
+              width: 72,
+              height: 28,
+              borderRadius: 50,
+              flexShrink: 0,
+              background: "var(--glass-bg-mid)",
+            }}
           />
         ))}
       </div>
-      <SkeletonList count={5} height={56} />
-      <SkeletonStyles />
+      <SkRow count={6} height={56} gap={5} radius={11} />
+      <SkStyles />
     </div>
   );
 }
@@ -105,9 +233,9 @@ export function GrocerySkeleton() {
 export function MembersSkeleton() {
   return (
     <div>
-      <SkeletonHeader />
-      <SkeletonList count={3} height={80} style={{ borderRadius: 14 }} />
-      <SkeletonStyles />
+      <SkHeader />
+      <SkRow count={4} height={80} gap={10} radius={14} />
+      <SkStyles />
     </div>
   );
 }
@@ -123,6 +251,7 @@ export function ChatSkeleton() {
         overflow: "hidden",
       }}
     >
+      {/* Sidebar */}
       <div
         style={{
           width: 210,
@@ -133,11 +262,28 @@ export function ChatSkeleton() {
           gap: 6,
         }}
       >
-        <Skeleton height={40} style={{ marginBottom: 6 }} />
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} height={44} />
+        <div
+          className="sk"
+          style={{
+            height: 40,
+            borderRadius: 8,
+            marginBottom: 6,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 44,
+              borderRadius: 8,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
         ))}
       </div>
+      {/* Messages */}
       <div
         style={{
           flex: 1,
@@ -147,21 +293,215 @@ export function ChatSkeleton() {
           gap: 16,
         }}
       >
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} style={{ display: "flex", gap: 10 }}>
-            <Skeleton
-              width={32}
-              height={32}
-              style={{ borderRadius: "50%", flexShrink: 0 }}
+            <div
+              className="sk"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                flexShrink: 0,
+                background: "var(--glass-bg-mid)",
+              }}
             />
             <div style={{ flex: 1 }}>
-              <Skeleton width={100} height={12} style={{ marginBottom: 6 }} />
-              <Skeleton height={16} />
+              <div
+                className="sk"
+                style={{
+                  width: 100,
+                  height: 12,
+                  borderRadius: 4,
+                  marginBottom: 6,
+                  background: "var(--glass-bg-mid)",
+                }}
+              />
+              <div
+                className="sk"
+                style={{
+                  height: 16,
+                  borderRadius: 4,
+                  background: "var(--glass-bg-mid)",
+                }}
+              />
             </div>
           </div>
         ))}
       </div>
-      <SkeletonStyles />
+      <SkStyles />
+    </div>
+  );
+}
+
+export function PollsSkeleton() {
+  return (
+    <div>
+      <SkHeader />
+      {/* Filter pills */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              width: 60,
+              height: 32,
+              borderRadius: 50,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{
+            height: 180,
+            borderRadius: 16,
+            marginBottom: 12,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      ))}
+      <SkStyles />
+    </div>
+  );
+}
+
+export function RulesSkeleton() {
+  return (
+    <div>
+      <SkHeader />
+      <SkRow count={4} height={70} gap={8} radius={12} />
+      <SkStyles />
+    </div>
+  );
+}
+
+export function NotesSkeleton() {
+  return (
+    <div>
+      <SkHeader />
+      {/* Filter pills */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              width: 70,
+              height: 32,
+              borderRadius: 50,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      <SkRow count={3} height={110} gap={8} radius={13} />
+      <SkStyles />
+    </div>
+  );
+}
+
+export function MeetingsSkeleton() {
+  return (
+    <div>
+      <SkHeader />
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{
+            height: 140,
+            borderRadius: 14,
+            marginBottom: 10,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      ))}
+      <SkStyles />
+    </div>
+  );
+}
+
+export function MoveOutSkeleton() {
+  return (
+    <div>
+      <SkHeader />
+      <div
+        className="sk"
+        style={{
+          height: 300,
+          borderRadius: 14,
+          background: "var(--glass-bg-mid)",
+        }}
+      />
+      <SkStyles />
+    </div>
+  );
+}
+
+export function SettingsSkeleton() {
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <div style={{ marginBottom: 28 }}>
+        <div
+          className="sk"
+          style={{
+            width: 160,
+            height: 28,
+            borderRadius: 6,
+            marginBottom: 8,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+        <div
+          className="sk"
+          style={{
+            width: 100,
+            height: 14,
+            borderRadius: 6,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      </div>
+      {/* Section nav pills */}
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          marginBottom: 24,
+          overflow: "hidden",
+        }}
+      >
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              width: 110,
+              height: 34,
+              borderRadius: 50,
+              flexShrink: 0,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      {[1, 2].map((i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{
+            height: 180,
+            borderRadius: 16,
+            marginBottom: 16,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      ))}
+      <SkStyles />
     </div>
   );
 }
@@ -169,77 +509,208 @@ export function ChatSkeleton() {
 export function HouseOverviewSkeleton() {
   return (
     <div>
-      <Skeleton width={200} height={28} style={{ marginBottom: 8 }} />
-      <Skeleton width={160} height={14} style={{ marginBottom: 32 }} />
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          className="sk"
+          style={{
+            width: 220,
+            height: 28,
+            borderRadius: 6,
+            marginBottom: 8,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+        <div
+          className="sk"
+          style={{
+            width: 160,
+            height: 14,
+            borderRadius: 6,
+            background: "var(--glass-bg-mid)",
+          }}
+        />
+      </div>
+      {/* Stats strip */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))",
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 72,
+              borderRadius: 12,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      {/* Cards grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
           gap: 14,
         }}
       >
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} height={90} style={{ borderRadius: 14 }} />
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 180,
+              borderRadius: 16,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
         ))}
       </div>
-      <SkeletonStyles />
+      <SkStyles />
     </div>
   );
 }
 
-export function SettingsSkeleton() {
+export function ProfileSkeleton() {
   return (
-    <div style={{ maxWidth: 560 }}>
-      <Skeleton width={160} height={28} style={{ marginBottom: 8 }} />
-      <Skeleton width={240} height={14} style={{ marginBottom: 28 }} />
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} style={{ marginBottom: 20 }}>
-          <Skeleton width={80} height={11} style={{ marginBottom: 6 }} />
-          <Skeleton height={40} />
-        </div>
-      ))}
-      <SkeletonStyles />
-    </div>
-  );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function SkeletonHeader() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 24,
-      }}
-    >
-      <div>
-        <Skeleton width={120} height={24} style={{ marginBottom: 8 }} />
-        <Skeleton width={180} height={13} />
+    <div style={{ maxWidth: 900 }}>
+      {/* Profile header card */}
+      <div
+        className="sk"
+        style={{
+          height: 140,
+          borderRadius: 20,
+          marginBottom: 24,
+          background: "var(--glass-bg-mid)",
+        }}
+      />
+      {/* Stats strip */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))",
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 88,
+              borderRadius: 14,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
       </div>
-      <Skeleton width={110} height={36} style={{ borderRadius: 50 }} />
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              width: 90,
+              height: 32,
+              borderRadius: 50,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      <SkRow count={4} height={64} gap={6} radius={12} />
+      <SkStyles />
     </div>
   );
 }
 
-function SkeletonList({ count = 4, height = 64, style = {} }) {
+export function DashboardHousesSkeleton() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <Skeleton
-          key={i}
-          height={height}
-          style={{ borderRadius: 12, ...style }}
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 28,
+        }}
+      >
+        <div>
+          <div
+            className="sk"
+            style={{
+              width: 120,
+              height: 26,
+              borderRadius: 6,
+              marginBottom: 8,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+          <div
+            className="sk"
+            style={{
+              width: 60,
+              height: 13,
+              borderRadius: 6,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        </div>
+        <div
+          className="sk"
+          style={{
+            width: 110,
+            height: 36,
+            borderRadius: 50,
+            background: "var(--glass-bg-mid)",
+          }}
         />
-      ))}
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
+          gap: 16,
+        }}
+      >
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="sk"
+            style={{
+              height: 140,
+              borderRadius: 16,
+              background: "var(--glass-bg-mid)",
+            }}
+          />
+        ))}
+      </div>
+      <SkStyles />
     </div>
   );
 }
 
-function SkeletonStyles() {
+export function MoveoutSkeleton() {
   return (
-    <style>{`.skeleton{animation:pulse 1.5s ease-in-out infinite} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+    <div>
+      <SkHeader />
+      <div
+        className="sk"
+        style={{
+          height: 320,
+          borderRadius: 14,
+          background: "var(--glass-bg-mid)",
+        }}
+      />
+      <SkStyles />
+    </div>
   );
 }

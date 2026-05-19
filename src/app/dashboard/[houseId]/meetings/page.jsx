@@ -18,9 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  Edit2,
   Trash2,
-  FileText,
 } from "lucide-react";
 
 const PLATFORM_CONFIG = {
@@ -105,26 +103,29 @@ function RSVPBar({ rsvps = [] }) {
   );
 }
 
-function MeetingCard({
-  meeting,
-  isManager,
-  userId,
-  onRsvp,
-  onCancel,
-  onUpdate,
-}) {
+function MeetingCard({ meeting, currentUser, isManager, onRsvp, onCancel }) {
   const [expanded, setExpanded] = useState(false);
   const [rsvping, setRsvping] = useState(false);
+
   const past = isPast(meeting.scheduledAt);
   const cancelled = !!meeting.cancelledAt;
+
+  // myRsvp is stored directly on the meeting object (set from API response)
   const myRsvp = meeting.myRsvp || "no_response";
   const rc = RSVP_CONFIG[myRsvp];
 
   async function handleRsvp(status) {
+    if (rsvping) return;
     setRsvping(true);
-    await onRsvp(meeting._id, status);
+    await onRsvp(meeting._id, status, currentUser);
     setRsvping(false);
   }
+
+  const isCreator =
+    currentUser &&
+    String(meeting.createdBy?._id || meeting.createdBy) ===
+      String(currentUser.userId);
+  const canCancel = (isManager || isCreator) && !cancelled;
 
   return (
     <div
@@ -146,7 +147,7 @@ function MeetingCard({
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Type badge + title */}
+            {/* Type badge row */}
             <div
               style={{
                 display: "flex",
@@ -174,9 +175,9 @@ function MeetingCard({
                 }}
               >
                 {meeting.type === "online" ? (
-                  <Video size={10} className="inline" />
+                  <Video size={10} />
                 ) : (
-                  <MapPin size={10} className="inline" />
+                  <MapPin size={10} />
                 )}
                 {meeting.type === "online"
                   ? PLATFORM_CONFIG[meeting.platform]?.label || "Online"
@@ -216,9 +217,11 @@ function MeetingCard({
                 </span>
               )}
             </div>
+
             <h3 style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 6 }}>
               {meeting.title}
             </h3>
+
             <div
               style={{
                 display: "flex",
@@ -295,6 +298,7 @@ function MeetingCard({
                 </span>
               )}
             </div>
+
             <RSVPBar rsvps={meeting.rsvps} />
           </div>
 
@@ -330,7 +334,8 @@ function MeetingCard({
                         background:
                           myRsvp === s ? `${c.color}18` : "transparent",
                         color: myRsvp === s ? c.color : "var(--muted)",
-                        cursor: "pointer",
+                        cursor: rsvping ? "not-allowed" : "pointer",
+                        opacity: rsvping ? 0.6 : 1,
                       }}
                     >
                       <Icon size={14} />
@@ -339,26 +344,25 @@ function MeetingCard({
                 })}
               </div>
             )}
-            {(isManager ||
-              String(meeting.createdBy?._id || meeting.createdBy) ===
-                String(userId)) &&
-              !cancelled && (
-                <button
-                  onClick={() => onCancel(meeting._id)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--muted)",
-                    fontSize: "0.72rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <Trash2 size={12} /> Cancel
-                </button>
-              )}
+
+            {canCancel && (
+              <button
+                onClick={() => onCancel(meeting._id)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                  fontSize: "0.72rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Trash2 size={12} /> Cancel
+              </button>
+            )}
+
             <button
               onClick={() => setExpanded((v) => !v)}
               style={{
@@ -374,6 +378,7 @@ function MeetingCard({
         </div>
       </div>
 
+      {/* Expanded details */}
       {expanded && (
         <div
           style={{
@@ -407,6 +412,7 @@ function MeetingCard({
               </p>
             </div>
           )}
+
           {meeting.type === "online" && meeting.meetingId && (
             <div
               style={{
@@ -442,6 +448,7 @@ function MeetingCard({
               )}
             </div>
           )}
+
           {meeting.location?.address && (
             <div
               style={{
@@ -453,6 +460,7 @@ function MeetingCard({
               Address: {meeting.location.address}
             </div>
           )}
+
           {meeting.notes && (
             <div style={{ marginTop: 8 }}>
               <div
@@ -478,7 +486,8 @@ function MeetingCard({
               </p>
             </div>
           )}
-          {/* Attendees */}
+
+          {/* Attendee list */}
           <div style={{ marginTop: 12 }}>
             <div
               style={{
@@ -496,10 +505,12 @@ function MeetingCard({
               {meeting.rsvps.map((r) => {
                 const rc = RSVP_CONFIG[r.status] || RSVP_CONFIG.no_response;
                 const RIcon = rc.icon;
-                const name = r.userId?.name || "Member";
+                // r.userId may be a populated object {_id, name, avatarUrl} or just a string ID
+                const name = r.userId?.name || r.name || "Member";
+                const uid = String(r.userId?._id || r.userId || "");
                 return (
                   <div
-                    key={String(r.userId?._id || r.userId)}
+                    key={uid || name}
                     style={{ display: "flex", alignItems: "center", gap: 10 }}
                   >
                     <div
@@ -546,7 +557,8 @@ export default function MeetingsPage() {
   const { houseId } = useParams();
   const [meetings, setMeetings] = useState([]);
   const [isManager, setIsManager] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState(null);
+  // currentUser holds { userId, name } so we can update RSVP in the UI
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -568,27 +580,35 @@ export default function MeetingsPage() {
   const setLoc = (k, v) =>
     setForm((p) => ({ ...p, location: { ...p.location, [k]: v } }));
 
-  async function load(upcoming = true) {
-    const res = await fetch(
-      `/api/houses/${houseId}/meetings?upcoming=${upcoming}`
-    );
-    const json = await res.json();
-    if (json.success) {
-      setMeetings(json.data);
-      setIsManager(json.isManager);
-    }
-    setLoading(false);
-  }
-
   useEffect(() => {
-    load(!showPast);
-    // Get current user id from house endpoint
-    fetch(`/api/houses/${houseId}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.success) setCurrentUserId(String(j.data.membershipId));
-      });
+    loadAll();
   }, [houseId, showPast]);
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const [mRes, hRes] = await Promise.all([
+        fetch(`/api/houses/${houseId}/meetings?upcoming=${!showPast}`),
+        fetch(`/api/houses/${houseId}`),
+      ]);
+      const [mJson, hJson] = await Promise.all([mRes.json(), hRes.json()]);
+
+      if (mJson.success) {
+        setMeetings(mJson.data);
+        setIsManager(mJson.isManager);
+      }
+      if (hJson.success) {
+        // Store current user's membershipId (used to check if creator)
+        setCurrentUser({
+          userId: String(hJson.data.managerId || ""),
+          membershipId: String(hJson.data.membershipId || ""),
+          name: "",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -617,6 +637,7 @@ export default function MeetingsPage() {
         toast.error(json.error);
         return;
       }
+      // API returns fully populated meeting including rsvps with userId.name
       setMeetings((p) => [{ ...json.data, myRsvp: "attending" }, ...p]);
       setShowForm(false);
       setForm({
@@ -639,39 +660,82 @@ export default function MeetingsPage() {
     }
   }
 
-  async function handleRsvp(meetingId, status) {
-    const res = await fetch(`/api/meetings/${meetingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "rsvp", status }),
-    });
-    const json = await res.json();
-    if (json.success) {
-      setMeetings((p) =>
-        p.map((m) => (m._id === meetingId ? { ...m, myRsvp: status } : m))
-      );
-    } else toast.error(json.error);
+  async function handleRsvp(meetingId, status, user) {
+    // Optimistic update: update myRsvp AND update the rsvps array so the
+    // expanded attendee list shows the correct name immediately
+    setMeetings((prev) =>
+      prev.map((m) => {
+        if (m._id !== meetingId) return m;
+
+        // Update the rsvps array — find existing entry and update it,
+        // or add new one. Preserve populated userId object if present.
+        const existingIdx = m.rsvps.findIndex(
+          (r) => String(r.userId?._id || r.userId) === String(user?.userId)
+        );
+
+        let updatedRsvps;
+        if (existingIdx >= 0) {
+          updatedRsvps = m.rsvps.map((r, i) =>
+            i === existingIdx ? { ...r, status } : r
+          );
+        } else {
+          // Shouldn't happen (all members pre-populated), but handle gracefully
+          updatedRsvps = [
+            ...m.rsvps,
+            {
+              userId: { _id: user?.userId, name: user?.name || "You" },
+              status,
+            },
+          ];
+        }
+
+        return { ...m, myRsvp: status, rsvps: updatedRsvps };
+      })
+    );
+
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rsvp", status }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || "Failed to save RSVP.");
+        // Revert — reload full data
+        loadAll();
+      }
+    } catch {
+      toast.error("Network error.");
+      loadAll();
+    }
   }
 
   async function handleCancel(meetingId) {
     const reason = window.prompt("Reason for cancellation (optional):");
     if (reason === null) return;
-    const res = await fetch(`/api/meetings/${meetingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancel", reason }),
-    });
-    const json = await res.json();
-    if (json.success) {
-      setMeetings((p) =>
-        p.map((m) =>
-          m._id === meetingId
-            ? { ...m, cancelledAt: new Date().toISOString() }
-            : m
-        )
-      );
-      toast.success("Meeting cancelled.");
-    } else toast.error(json.error);
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", reason }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMeetings((p) =>
+          p.map((m) =>
+            m._id === meetingId
+              ? { ...m, cancelledAt: new Date().toISOString() }
+              : m
+          )
+        );
+        toast.success("Meeting cancelled.");
+      } else {
+        toast.error(json.error);
+      }
+    } catch {
+      toast.error("Network error.");
+    }
   }
 
   const upcoming = meetings.filter(
@@ -679,12 +743,7 @@ export default function MeetingsPage() {
   );
   const past = meetings.filter((m) => isPast(m.scheduledAt) || m.cancelledAt);
 
-  if (loading)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading meetings…
-      </div>
-    );
+  if (loading) return <MeetingsSkeleton />;
 
   return (
     <div>
@@ -706,7 +765,7 @@ export default function MeetingsPage() {
               marginBottom: 4,
             }}
           >
-            <Video size={20} color="var(--accent)" className="inline" />
+            <Video size={20} color="var(--accent)" />
             <h1
               style={{
                 fontSize: "1.4rem",
@@ -805,7 +864,6 @@ export default function MeetingsPage() {
                 />
               </div>
 
-              {/* Type toggle */}
               <div>
                 <label style={lS}>Meeting Type</label>
                 <div
@@ -850,7 +908,6 @@ export default function MeetingsPage() {
                 </div>
               </div>
 
-              {/* Date + duration */}
               <div
                 style={{
                   display: "grid",
@@ -882,7 +939,6 @@ export default function MeetingsPage() {
                 </div>
               </div>
 
-              {/* Online fields */}
               {form.type === "online" && (
                 <>
                   <div>
@@ -937,14 +993,13 @@ export default function MeetingsPage() {
                 </>
               )}
 
-              {/* Offline fields */}
               {form.type === "offline" && (
                 <>
                   <div>
                     <label style={lS}>Location Name *</label>
                     <input
                       style={iS}
-                      placeholder="e.g. Living room, Café Blue"
+                      placeholder="e.g. Living room"
                       value={form.location.name}
                       onChange={(e) => setLoc("name", e.target.value)}
                     />
@@ -1020,21 +1075,23 @@ export default function MeetingsPage() {
         </div>
       )}
 
-      {/* Upcoming meetings */}
+      {/* Upcoming */}
       {upcoming.length === 0 && !showPast ? (
         <div
           style={{
             textAlign: "center",
             padding: "60px 0",
-            justifyItems: "center",
-
             color: "var(--muted)",
           }}
         >
           <Video
             size={40}
-            style={{ marginBottom: 12, opacity: 0.3 }}
-            className="inline"
+            style={{
+              marginBottom: 12,
+              opacity: 0.3,
+              display: "block",
+              margin: "0 auto 12px",
+            }}
           />
           <p>No upcoming meetings.</p>
           <p style={{ fontSize: "0.82rem", marginTop: 4 }}>
@@ -1047,8 +1104,8 @@ export default function MeetingsPage() {
             <MeetingCard
               key={m._id}
               meeting={m}
+              currentUser={currentUser}
               isManager={isManager}
-              userId={currentUserId}
               onRsvp={handleRsvp}
               onCancel={handleCancel}
             />
@@ -1056,7 +1113,7 @@ export default function MeetingsPage() {
         </div>
       )}
 
-      {/* Past meetings toggle */}
+      {/* Past */}
       {past.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <button
@@ -1091,8 +1148,8 @@ export default function MeetingsPage() {
                 <MeetingCard
                   key={m._id}
                   meeting={m}
+                  currentUser={currentUser}
                   isManager={isManager}
-                  userId={currentUserId}
                   onRsvp={handleRsvp}
                   onCancel={handleCancel}
                 />
@@ -1103,6 +1160,44 @@ export default function MeetingsPage() {
       )}
 
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} select option{background:#0e1520;color:#f0ede8}`}</style>
+    </div>
+  );
+}
+
+function MeetingsSkeleton() {
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 28,
+        }}
+      >
+        <div>
+          <div
+            className="sk"
+            style={{ width: 120, height: 28, borderRadius: 6, marginBottom: 8 }}
+          />
+          <div
+            className="sk"
+            style={{ width: 80, height: 14, borderRadius: 6 }}
+          />
+        </div>
+        <div
+          className="sk"
+          style={{ width: 110, height: 36, borderRadius: 50 }}
+        />
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="sk"
+          style={{ height: 140, borderRadius: 14, marginBottom: 10 }}
+        />
+      ))}
+      <style>{`.sk{background:var(--glass-bg-mid);animation:pulse 1.5s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { ChatSkeleton } from "@/components/ui/Skeleton";
 import {
   MessageSquare,
   Plus,
@@ -604,12 +605,7 @@ export default function ChatPage() {
         (!p.threadId && activeThread.type === "general"))
   );
 
-  if (loadingThreads)
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-        Loading chat…
-      </div>
-    );
+  if (loadingThreads) return <ChatSkeleton />;
 
   return (
     <>

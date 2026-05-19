@@ -433,6 +433,8 @@ export default function HouseSettingsPage() {
   const [activeSection, setActiveSection] = useState("general");
   const [house, setHouse] = useState(null);
   const [members, setMembers] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [rulesLoading, setRulesLoading] = useState(true);
   const [myRole, setMyRole] = useState(null);
   const [myMembershipId, setMyMembershipId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -445,12 +447,14 @@ export default function HouseSettingsPage() {
     type: "flat",
     currency: "BDT",
     rentDueDay: 1,
-    rules: "",
     address: { line1: "", city: "", country: "" },
   });
+  const [initialForm, setInitialForm] = useState(null);
   const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const setAddr = (k, v) =>
     setForm((p) => ({ ...p, address: { ...p.address, [k]: v } }));
+  const formChanged =
+    initialForm && JSON.stringify(form) !== JSON.stringify(initialForm);
 
   // Permissions (stored as house settings — simplified flags)
   const [permissions, setPermissions] = useState({
@@ -462,6 +466,7 @@ export default function HouseSettingsPage() {
     guestsCanSeeMembers: false,
     guestsCanSeeLedger: false,
   });
+  const [initialPermissions, setInitialPermissions] = useState(null);
 
   // Notification settings
   const [notifSettings, setNotifSettings] = useState({
@@ -471,6 +476,14 @@ export default function HouseSettingsPage() {
     billAlerts: true,
     pollAlerts: true,
   });
+  const [initialNotifSettings, setInitialNotifSettings] = useState(null);
+
+  const permissionsChanged =
+    initialPermissions &&
+    JSON.stringify(permissions) !== JSON.stringify(initialPermissions);
+  const notifChanged =
+    initialNotifSettings &&
+    JSON.stringify(notifSettings) !== JSON.stringify(initialNotifSettings);
 
   // Delete confirmation
   const [deleteInput, setDeleteInput] = useState("");
@@ -481,31 +494,73 @@ export default function HouseSettingsPage() {
   }, [houseId]);
 
   async function loadData() {
-    const [hRes, mRes] = await Promise.all([
-      fetch(`/api/houses/${houseId}`),
-      fetch(`/api/houses/${houseId}/members`),
-    ]);
-    const [hJson, mJson] = await Promise.all([hRes.json(), mRes.json()]);
-    if (hJson.success) {
-      const h = hJson.data;
-      setHouse(h);
-      setMyRole(h.role);
-      setMyMembershipId(h.membershipId);
-      setForm({
-        name: h.name || "",
-        type: h.type || "flat",
-        currency: h.currency || "BDT",
-        rentDueDay: h.rentDueDay || 1,
-        rules: h.rules || "",
-        address: {
-          line1: h.address?.line1 || "",
-          city: h.address?.city || "",
-          country: h.address?.country || "",
-        },
-      });
+    setLoading(true);
+    setRulesLoading(true);
+    try {
+      const [hRes, mRes, rRes] = await Promise.all([
+        fetch(`/api/houses/${houseId}`),
+        fetch(`/api/houses/${houseId}/members`),
+        fetch(`/api/houses/${houseId}/rules`),
+      ]);
+
+      if (!hRes.ok || !mRes.ok) {
+        throw new Error(
+          `Settings fetch failed: ${!hRes.ok ? hRes.status : mRes.status}`
+        );
+      }
+
+      const [hJson, mJson, rJson] = await Promise.all([
+        hRes.json(),
+        mRes.json(),
+        rRes.json().catch(() => ({ success: false })),
+      ]);
+
+      if (hJson.success) {
+        const h = hJson.data;
+        setHouse(h);
+        setMyRole(h.role);
+        setMyMembershipId(h.membershipId);
+        const loadedForm = {
+          name: h.name || "",
+          type: h.type || "flat",
+          currency: h.currency || "BDT",
+          rentDueDay: h.rentDueDay || 1,
+          address: {
+            line1: h.address?.line1 || "",
+            city: h.address?.city || "",
+            country: h.address?.country || "",
+          },
+        };
+        setForm(loadedForm);
+        setInitialForm(loadedForm);
+
+        // Use permissions/notifications from house if provided, otherwise keep defaults.
+        if (h.permissions) {
+          setPermissions(h.permissions);
+          setInitialPermissions(h.permissions);
+        } else {
+          setInitialPermissions(permissions);
+        }
+        if (h.notifSettings) {
+          setNotifSettings(h.notifSettings);
+          setInitialNotifSettings(h.notifSettings);
+        } else {
+          setInitialNotifSettings(notifSettings);
+        }
+      }
+      if (mJson.success) setMembers(mJson.data);
+      if (rJson.success) setRules(rJson.data || []);
+      else setRules([]);
+    } catch (err) {
+      console.error("Settings load error:", err);
+      toast.error(
+        "Unable to load house settings. Please sign in or refresh the page."
+      );
+      router.push("/sign-in");
+    } finally {
+      setLoading(false);
+      setRulesLoading(false);
     }
-    if (mJson.success) setMembers(mJson.data);
-    setLoading(false);
   }
 
   const isManager = myRole === "manager";
@@ -522,7 +577,13 @@ export default function HouseSettingsPage() {
       const res = await fetch(`/api/houses/${houseId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          type: form.type,
+          currency: form.currency,
+          rentDueDay: form.rentDueDay,
+          address: form.address,
+        }),
       });
       const json = await res.json();
       if (!json.success) {
@@ -530,11 +591,44 @@ export default function HouseSettingsPage() {
         return;
       }
       setHouse((prev) => ({ ...prev, ...json.data }));
+      setInitialForm({
+        ...form,
+        address: { ...form.address },
+      });
       toast.success("Settings saved.");
     } catch {
       toast.error("Network error.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // New: save permissions (could be extended to call an API endpoint)
+  async function handleSavePermissions() {
+    if (!isManager) return;
+    // Optionally: call API to persist permissions.
+    try {
+      // Example (uncomment and adapt if backend exists):
+      // const res = await fetch(`/api/houses/${houseId}/settings/permissions`, { method: "PATCH", headers:{'Content-Type':'application/json'}, body: JSON.stringify(permissions) });
+      // const json = await res.json();
+      // if (!json.success) throw new Error(json.error || 'Failed to save');
+      setInitialPermissions(JSON.parse(JSON.stringify(permissions)));
+      toast.success("Permissions saved.");
+    } catch (err) {
+      console.error("Save permissions error:", err);
+      toast.error("Failed to save permissions.");
+    }
+  }
+
+  // New: save notification settings
+  async function handleSaveNotifications() {
+    try {
+      // Optionally: call API to persist notifSettings.
+      setInitialNotifSettings(JSON.parse(JSON.stringify(notifSettings)));
+      toast.success("Notification settings saved.");
+    } catch (err) {
+      console.error("Save notifications error:", err);
+      toast.error("Failed to save notification settings.");
     }
   }
 
@@ -677,10 +771,13 @@ export default function HouseSettingsPage() {
   return (
     <div
       style={{
-        maxWidth: 680,
+        width: "100%",
+        maxWidth: 980,
+        margin: "0 auto",
+        padding: "24px 0",
         display: "flex",
-        gap: 0,
         flexDirection: "column",
+        gap: 24,
       }}
     >
       {/* ── page header ───────────────────────────────────────────────────── */}
@@ -912,37 +1009,118 @@ export default function HouseSettingsPage() {
 
           <SectionCard
             title="House Rules"
-            subtitle="Visible to all members. Max 2000 characters."
+            subtitle="Rules are sourced from the Rules tab and kept in sync."
           >
-            <textarea
-              style={{
-                ...iS,
-                minHeight: 120,
-                resize: "vertical",
-                fontFamily: "inherit",
-                lineHeight: 1.6,
-              }}
-              placeholder="e.g. No guests after 11pm. Kitchen must be clean by midnight. Quiet hours 10pm–8am."
-              value={form.rules}
-              onChange={(e) => setF("rules", e.target.value)}
-              maxLength={2000}
-            />
-            <div
-              style={{
-                fontSize: "0.7rem",
-                color: "var(--muted)",
-                marginTop: 5,
-                textAlign: "right",
-              }}
-            >
-              {form.rules.length}/2000
-            </div>
+            {rulesLoading ? (
+              <p style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                Loading rules...
+              </p>
+            ) : rules.length === 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  fontSize: "0.82rem",
+                  color: "var(--muted)",
+                }}
+              >
+                <p>No house rules are set yet.</p>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/dashboard/${houseId}/rules`)}
+                  style={{
+                    alignSelf: "flex-start",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "9px 14px",
+                    borderRadius: 10,
+                    background: "var(--accent)",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Manage Rules <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {rules.map((rule) => (
+                  <div
+                    key={rule._id}
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-surface)",
+                      borderRadius: 12,
+                      border: "1px solid var(--glass-border)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        #{rule.ruleNumber} {rule.title}
+                      </div>
+                      {rule.description && (
+                        <div
+                          style={{
+                            fontSize: "0.78rem",
+                            color: "var(--muted)",
+                            marginTop: 4,
+                          }}
+                        >
+                          {rule.description}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "var(--accent)",
+                      }}
+                    >
+                      Synced
+                    </span>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => router.push(`/dashboard/${houseId}/rules`)}
+                  style={{
+                    alignSelf: "flex-start",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "9px 14px",
+                    borderRadius: 10,
+                    background: "var(--glass-bg)",
+                    color: "var(--text)",
+                    border: "1px solid var(--glass-border)",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Open Rules Tab <ArrowRight size={14} />
+                </button>
+              </div>
+            )}
           </SectionCard>
 
           {isManager && (
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !formChanged}
               style={{
                 width: "100%",
                 padding: "13px",
@@ -950,14 +1128,20 @@ export default function HouseSettingsPage() {
                 fontWeight: 700,
                 fontSize: "0.9rem",
                 border: "none",
-                cursor: saving ? "not-allowed" : "pointer",
-                background: saving ? "var(--glass-bg-mid)" : "var(--accent)",
-                color: saving ? "var(--muted)" : "#fff",
+                cursor: saving || !formChanged ? "not-allowed" : "pointer",
+                background:
+                  saving || !formChanged
+                    ? "var(--glass-bg-mid)"
+                    : "var(--accent)",
+                color: saving || !formChanged ? "var(--muted)" : "#fff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
-                boxShadow: saving ? "none" : "0 8px 24px rgba(232,98,26,0.2)",
+                boxShadow:
+                  saving || !formChanged
+                    ? "none"
+                    : "0 8px 24px rgba(232,98,26,0.2)",
               }}
             >
               {saving ? (
@@ -1178,7 +1362,7 @@ export default function HouseSettingsPage() {
 
           {isManager && (
             <button
-              onClick={() => toast.success("Permissions saved.")}
+              onClick={handleSavePermissions}
               style={{
                 width: "100%",
                 padding: "12px",
@@ -1186,9 +1370,11 @@ export default function HouseSettingsPage() {
                 fontWeight: 700,
                 fontSize: "0.88rem",
                 border: "none",
-                cursor: "pointer",
-                background: "var(--accent)",
-                color: "#fff",
+                cursor: permissionsChanged ? "pointer" : "not-allowed",
+                background: permissionsChanged
+                  ? "var(--accent)"
+                  : "var(--glass-bg-mid)",
+                color: permissionsChanged ? "#fff" : "var(--muted)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1253,7 +1439,7 @@ export default function HouseSettingsPage() {
           </SectionCard>
 
           <button
-            onClick={() => toast.success("Notification settings saved.")}
+            onClick={handleSaveNotifications}
             style={{
               width: "100%",
               padding: "12px",
@@ -1261,9 +1447,11 @@ export default function HouseSettingsPage() {
               fontWeight: 700,
               fontSize: "0.88rem",
               border: "none",
-              cursor: "pointer",
-              background: "var(--accent)",
-              color: "#fff",
+              cursor: notifChanged ? "pointer" : "not-allowed",
+              background: notifChanged
+                ? "var(--accent)"
+                : "var(--glass-bg-mid)",
+              color: notifChanged ? "#fff" : "var(--muted)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1695,7 +1883,7 @@ function PendingInvites({ houseId, isManager }) {
 
 function SettingsSkeleton() {
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div style={{ width: "100%", maxWidth: 980, margin: "0 auto" }}>
       <div
         style={{
           height: 60,

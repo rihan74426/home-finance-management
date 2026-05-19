@@ -106,7 +106,6 @@ const lS = {
   letterSpacing: "0.05em",
 };
 
-// ── Single grocery row ────────────────────────────────────────────────────────
 function GroceryRow({ item, toggling, onToggle, onDelete }) {
   const cat = CAT_COLORS[item.category] || CAT_COLORS.other;
   const done = item.isBought;
@@ -122,7 +121,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         gap: 11,
       }}
     >
-      {/* Checkbox */}
       <button
         onClick={onToggle}
         disabled={toggling}
@@ -152,7 +150,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         ) : null}
       </button>
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -216,7 +213,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         )}
       </div>
 
-      {/* Added-by avatar */}
       {!done && item.addedBy?.name && (
         <div
           style={{
@@ -238,7 +234,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
         </div>
       )}
 
-      {/* Delete — undo enabled */}
       <button
         onClick={onDelete}
         style={{
@@ -260,7 +255,6 @@ function GroceryRow({ item, toggling, onToggle, onDelete }) {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function GroceryPage() {
   const { houseId } = useParams();
   const { deleteGroceryItem, toggleGroceryBought } = usePageActions({
@@ -284,12 +278,21 @@ export default function GroceryPage() {
 
   const nameRef = useRef(null);
   const pollRef = useRef(null);
-  // Track item IDs with pending optimistic ops so polling doesn't overwrite them
-  const pendingOps = useRef(new Set());
+
+  /**
+   * pendingIds: IDs of items currently under a pending undo operation.
+   * The poll merge will SKIP these items entirely — won't restore deleted
+   * items and won't overwrite optimistically-toggled state.
+   *
+   * deletedIds: IDs of items deleted optimistically but not yet confirmed
+   * by API. The poll will filter these OUT of any server response so they
+   * don't get restored while the user is still within the undo window.
+   */
+  const pendingIds = useRef(new Set());
+  const deletedIds = useRef(new Set());
 
   const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchItems = useCallback(
     async (showBoughtFlag, silent = false) => {
       try {
@@ -300,28 +303,53 @@ export default function GroceryPage() {
         if (!json.success) return;
 
         setItems((prev) => {
-          if (pendingOps.current.size === 0) {
-            if (silent && json.data.length > prev.length) {
+          const serverItems = json.data;
+
+          // Filter out items that are pending deletion (don't restore them)
+          const filteredServer = serverItems.filter(
+            (i) => !deletedIds.current.has(String(i._id))
+          );
+
+          if (pendingIds.current.size === 0) {
+            // No pending ops — check if new items arrived for live indicator
+            if (silent && filteredServer.length > prev.length) {
               setLiveIndicator(true);
               setTimeout(() => setLiveIndicator(false), 1200);
             }
-            return json.data;
+            return filteredServer;
           }
-          // Merge: keep optimistic state for pending items
-          const serverMap = Object.fromEntries(
-            json.data.map((i) => [String(i._id), i])
+
+          // Pending ops exist — merge carefully
+          const serverMap = new Map(
+            filteredServer.map((i) => [String(i._id), i])
           );
-          const merged = prev.map((item) =>
-            pendingOps.current.has(String(item._id))
-              ? item
-              : serverMap[String(item._id)] || item
+
+          // Keep existing optimistic state for pending items, update the rest
+          const merged = prev
+            .map((item) => {
+              const id = String(item._id);
+              // Item is under pending op — keep our optimistic version
+              if (pendingIds.current.has(id)) return item;
+              // Item was deleted optimistically — keep it gone
+              if (deletedIds.current.has(id)) return null;
+              // Normal item — use server version if available
+              return serverMap.get(id) || item;
+            })
+            .filter(Boolean);
+
+          // Add genuinely new items from server (not in our list at all)
+          const existingIds = new Set(merged.map((i) => String(i._id)));
+          const newItems = filteredServer.filter(
+            (i) =>
+              !existingIds.has(String(i._id)) &&
+              !deletedIds.current.has(String(i._id))
           );
-          const prevIds = new Set(prev.map((i) => String(i._id)));
-          const newItems = json.data.filter((i) => !prevIds.has(String(i._id)));
+
           if (newItems.length > 0 && silent) {
             setLiveIndicator(true);
             setTimeout(() => setLiveIndicator(false), 1200);
           }
+
           return [...merged, ...newItems];
         });
       } catch {
@@ -350,7 +378,6 @@ export default function GroceryPage() {
     if (showForm) setTimeout(() => nameRef.current?.focus(), 50);
   }, [showForm]);
 
-  // ── Add item ──────────────────────────────────────────────────────────────
   async function handleAdd(e) {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -380,28 +407,50 @@ export default function GroceryPage() {
     }
   }
 
-  // ── Toggle bought — undo enabled ──────────────────────────────────────────
   function handleToggle(item) {
     const id = String(item._id);
-    pendingOps.current.add(id);
+    // Register as pending so polling doesn't overwrite our optimistic state
+    pendingIds.current.add(id);
+
     toggleGroceryBought({
       item,
       items,
       setItems,
       setToggling,
-      // Clean up pending flag after API resolves
-      onSuccess: () => pendingOps.current.delete(id),
-      onError: () => pendingOps.current.delete(id),
+      onSuccess: () => pendingIds.current.delete(id),
+      onError: () => pendingIds.current.delete(id),
     });
+
+    // Also register a cancel callback: if user undoes, remove from pending
+    // The undo revert will restore items state, and pendingIds cleared
+    // We rely on onSuccess/onError to clean up after API fires
+    // For the undo window itself, pendingIds stays set — that's correct,
+    // we DO want to protect the optimistic state during the undo window
   }
 
-  // ── Delete — undo enabled ─────────────────────────────────────────────────
   function handleDelete(item) {
+    const id = String(item._id);
+    // Mark as deleted — polling will filter this ID out of server responses
+    deletedIds.current.add(id);
+    // Also mark as pending
+    pendingIds.current.add(id);
+
     deleteGroceryItem({
       itemId: item._id,
       itemName: item.name,
       items,
       setItems,
+      onSuccess: () => {
+        // API confirmed deletion — keep in deletedIds to prevent any
+        // race condition with a last poll that was in-flight
+        pendingIds.current.delete(id);
+        setTimeout(() => deletedIds.current.delete(id), 2000);
+      },
+      onError: () => {
+        // API failed or user undid — remove from deletedIds so item reappears
+        deletedIds.current.delete(id);
+        pendingIds.current.delete(id);
+      },
     });
   }
 
@@ -411,7 +460,6 @@ export default function GroceryPage() {
     await fetchItems(next, false);
   }
 
-  // ── Derived lists ─────────────────────────────────────────────────────────
   const active = items.filter((i) => !i.isBought);
   const bought = items.filter((i) => i.isBought);
   const applyFilter = (list) =>
@@ -422,7 +470,14 @@ export default function GroceryPage() {
   if (loading) return <GrocerySkeleton />;
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 980,
+        margin: "0 auto",
+        padding: "24px 0",
+      }}
+    >
       {/* Header */}
       <div
         style={{
@@ -451,7 +506,6 @@ export default function GroceryPage() {
             >
               Grocery List
             </h1>
-            {/* Live indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div
                 style={{
